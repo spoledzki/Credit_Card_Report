@@ -1,0 +1,496 @@
+---
+title: "Klasyfikacja klientów banku pod względem rezygnacji z posiadania karty kredytowej"
+author: "Szymon Olędzki"
+language: 'polski.yml'
+format:
+  html:
+    theme:
+      light: flatly
+      dark: darkly
+    highlight-style: ayu
+    smooth-scroll: true
+    code-fold: true
+    code-tools:
+      source: https://github.com/spoledzki/Eksploracja_Danych
+    code-link: true
+    other-links:
+      - text: Repozytorium projektu
+        icon: github
+        href: https://github.com/spoledzki/Eksploracja_Danych
+      - text: Zbiór danych na Kaggle
+        icon: filetype-csv
+        href: https://www.kaggle.com/datasets/anwarsan/credit-card-bank-churn/data?select=credit_card_churn.csv
+    code-block-bg: true
+    code-block-border-left: "#31BAE9"
+    code-summary: "Pokaż kod"
+    code-overflow: wrap
+    toc: true
+    toc-title: "Spis treści"
+    embed-resources: true
+    data-resources: true
+bibliography: bibliography.bib
+execute:
+  echo: false
+  warning: false
+  message: false
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r Wczytanie bibliotek}
+library(tidyverse)
+library(tidymodels)
+library(ggcorrplot)
+library(rcompanion)
+library(highcharter)
+library(themis)
+library(doSNOW)
+```
+
+```{r Wczytanie danych}
+data <- read.csv('data/clean_data.csv')
+```
+
+```{r Wstępna modyfikacja danych}
+edu <- c('Unknown', 'Uneducated', 'High School', 'College', 'Graduate', 'Post-Graduate', 'Doctorate')
+
+income <- c('Unknown', 'Less than $40K', '$40K - $60K', '$60K - $80K', '$80K - $120K', '$120K +')
+
+card <- c('Blue', 'Silver', 'Gold', 'Platinum')
+
+data <- data %>% 
+  mutate(across(c('Attrition_Flag', 'Gender', 'Marital_Status'), factor),
+         Education_Level = factor(Education_Level, levels = edu, ordered = T),
+         Income_Category = factor(Income_Category, levels = income, ordered = T),
+         Card_Category = factor(Card_Category, levels = card, ordered = T))
+
+ordered_var_names <- colnames(data %>% select(where(is.ordered)))
+nominal_var_names <- setdiff(colnames(data %>% select(where(is.factor))), ordered_var_names)
+numeric_var_names <- colnames(data %>% select(where(is.numeric)))
+```
+
+
+## Karty kredytowe w USA
+
+Tu będzie kilka fatów i ciekawostek o kartach kredytowych w USA.
+
+## Problem badawczy
+
+Opis problemu badawczego
+
+Celem niniejszego projektu jest budowa optymalnego modelu klasyfikacyjnego, którego zadaniem będzie predykcja, czy dany klient banku zrezygnuje z posiadania karty kredytowej. Zagadnienie to jest biznesowo istotne dla możliwie skutecznego przeciwdziałania utracie klientów.
+
+## Zbiór danych
+
+Zbiór danych [Credit Card Churn Prediction](https://www.kaggle.com/datasets/anwarsan/credit-card-bank-churn/data) pochodzi z serwisu Kaggle. Zawiera informacje o 10127 klientach banku, u których na podstawie 20 zmiennych określono fakt posiadania przynajmniej jednej karty kredytowej - jest to 21 zmienna w zbiorze.
+
+Informacje o wykorzystywanych zmiennych przedstawiam poniżej.
+
+1.  `CLIENTNUM` - numer identyfikacyjny unikalny dla każdego klienta banku
+2.  `Attrition_Flag` - *zmienna binarna* opisująca status klienta banku, jest to **zmienna zależna** w badaniu, przyjmuje 2 wartości:
+    1.  `Existing Customer` - klient aktywny
+    2.  `Attrited Customer` - klient nieobsługiwany
+3.  `Customer_Age` - *zmienna ilościowa* opisująca wiek klienta
+4.  `Gender` - *zmienna binarna* opisująca płeć klienta, przyjmuje 2 wartości:
+    1.  `F` - kobieta
+    2.  `M` - mężczyzna
+5.  `Dependent_Count` - *zmienna ilościowa* opisująca liczbę osób, które są na utrzymaniu klienta
+6.  `Education_Level` - *zmienna porządkowa* opisująca wykształcenie klienta, przyjmuje 7 wartości:
+    1.  `Uneducated`
+    2.  `High School`
+    3.  `Graduate`
+    4.  `Post-Graduate`
+    5.  `College`
+    6.  `Doctorate`
+    7.  `Unknown`
+7.  `Marital_Status` - *zmienna jakościowa* opisująca stan cywilny klienta, przyjmuje 4 wartości:
+    1.  `Single` - samotny
+    2.  `Married` - pozostający w związku małżeńskim
+    3.  `Divorced` - rozwiedziony
+    4.  `Unknown` - nieznany
+8.  `Income_Category` - *zmienna porządkowa* opisująca roczny przychód klienta, przyjmuje 6 wartości:
+    1.  `Less than $40K` - poniżej 40 tys. dolarów
+    2.  `$40K - $60K` - między 40, a 60 tys. dolarów
+    3.  `$60K - $80K` - między 60, a 80 tys. dolarów
+    4.  `$80K - $120K` - między 80, a 120 tys. dolarów
+    5.  `$120K +` - powyżej 120 tys. dolarów
+    6.  `Unknown` - nieznany
+9.  `Card_Category` - *zmienna porządkowa* opisująca rodzaj posiadanej przez klienta karty kredytowej, przyjmuje 4 wartości:
+    1.  `Blue`
+    2.  `Silver`
+    3.  `Gold`
+    4.  `Platinum`
+10. `Months_on_book` - *zmienna ilościowa* opisująca od ilu miesięcy klient jest związany z bankiem
+11. `Total_Relationship_Count` - *zmienna ilościowa* opisująca ile kart kredytowych posiada dany klient
+12. `Months_Inactive_12_mon` - *zmienna ilościowa* opisująca przez ile miesięcy (w ciągu ostatnich 12 miesięcy) klient nie podejmował żadnej aktywności
+13. `Contacts_Count_12_mon` - *zmienna ilościowa* opisująca ile razy w ciągu ostatnich 12 miesięcy bank kontaktował się z klientem
+14. `Credit_Limit` - *zmienna ilościowa* opisująca limit kredytowy na karcie klienta
+15. `Total_Revolving_Bal` - *zmienna ilościowa* opisująca całkowite saldo odnawialne na karcie klienta
+16. `Avg_Open_To_Buy` - *zmienna ilościowa* opisująca średnią różnicę między limitem kredytowym a stanem konta klienta w ciągu ostatnich 12 miesięcy
+17. `Total_Amt_Chng_Q4_Q1` - *zmienna ilościowa* opisująca zmianę w kwotach dokonywanych transakcji, porównanie 4 kwartału do 1 kwartału.
+18. `Total_Trans_Amt` - *zmienna ilościowa* opisująca sumę dokonanych transakcji z ostatnich 12 miesięcy
+19. `Total_Trans_Ct` - *zmienna ilościowa* opisująca liczbę dokonanych transakcji z ostatnich 12 miesięcy
+20. `Total_Ct_Chng_Q4_Q1` - *zmienna ilościowa* opisująca zmianę w liczbie dokonywanych transakcji, porównanie 4 kwartału do 1 kwartału.
+21. `Avg_Utilization_Ratio` - *zmienna ilościowa* opisująca średni wskaźnik wykorzystania środków z limitu karty kredytowej
+
+### Przygotowanie danych do dalszej pracy
+
+
+### Zależności w analizowanym zbiorze danych
+
+#### Zmienne ilościowe
+
+Analizę zależności cech rozpocznę od zbadania korelacji R-Pearsona pośród zmiennych ilościowych.
+
+```{r Korelacje zmiennych ilościowych}
+numeric_data_cor <- data %>% 
+  select(numeric_var_names) %>% 
+  cor()
+
+ggcorrplot(corr = numeric_data_cor,
+           type = 'lower',
+           title = 'Macierz korelacji zmiennych ilościowych',
+           legend.title = 'Korelacja',
+           lab = TRUE,
+           lab_size = 2,
+           tl.cex = 8,
+           insig = 'pch')
+```
+
+Na podstawie powyższej wizualizacji zauważyć można trzy silnie dodatnio skorelowane pary zmiennych:
+1. Wiek klienta (`Customer_Age`) oraz liczba miesięcy korzystania z usług banku (`Months_on_book`)
+2. Suma (`Total_Trans_Amt`) oraz liczba (`Total_Trans_Ct`) dokonanych w ciągu ostatnich 12 miesięcy transakcji
+3. Limit kredytowy na karcie klienta (`Credit_Limit`) oraz średnia różnica między limitem a stanem konta w ciągu ostatnich 12 miesięcy (`Avg_Open_To_Buy`)
+
+Wysokie wartości tych korelacji mają oczywiście sens i bezpośrednie przełożenie na rzeczywistość.
+
+#### Zmienne jakościowe
+
+Analizę zależności zmiennych jakościowych rozpoczynam od zbadania zależności wszystkich par cech za pomocą testu $\chi^2$.
+
+```{r Badanie niezależności cech nominalnych}
+nominal_vars_df <- combn(c(nominal_var_names, ordered_var_names), 2) %>% t() %>% as.data.frame()
+colnames(nominal_vars_df) <- c('Zmienna 1', 'Zmienna 2')
+
+p.vals <- numeric()
+
+for (i in 1:nrow(nominal_vars_df)) {
+  test <- chisq.test(data[[nominal_vars_df[i,1]]], data[[nominal_vars_df[i,2]]])
+  p.vals <- c(p.vals, test$p.value)
+}
+
+nominal_vars_df$`p-value` <- p.vals
+
+nominal_vars_df <- nominal_vars_df %>% 
+  mutate(Werdykt = if_else(`p-value` < 0.05, 'zależne', 'niezależne'))
+
+knitr::kable(nominal_vars_df)
+```
+
+Spośród 15 badanych par, dla 7 z nich odrzucamy hipotezę zerową o niezależności cech. Następnym krokiem będzie zbadanie siły zależności dla każdej z 7 par, do tego celu wykorzystam współczynnik V-Cramera.
+
+```{r Badanie siły związku par zmiennych zależnych}
+non_indep_nominal <- nominal_vars_df %>% 
+  filter(Werdykt == 'zależne')
+
+v.cramer <- numeric()
+
+for (i in 1:nrow(non_indep_nominal)) {
+  test <- cramerV(data[[non_indep_nominal[i,1]]], data[[non_indep_nominal[i,2]]])
+  v.cramer <- c(v.cramer, test)
+}
+
+non_indep_nominal$`V-Cramer` <- v.cramer
+
+knitr::kable(non_indep_nominal)
+```
+
+Jak się okazuje, tylko w przypadku zmiennych płci (`Gender`) i progu dochodowego (`Income_Category`) zależność jest naprawdę silna. Pozostałe wartości są istotnie różne od zera, jednak nie pozwalają na wyciągnięcie pożytecznych wniosków. Martwić może jedynie fakt, że żadna ze zmiennych jakościowych nie ma silnego związku ze zmienną zależną, dzięki czemu nie możemy na tym etapie wskazać żadnej z nich jako istotnego predyktora dla problemu badawczego.
+
+```{r Wykres dla pary zmiennych silnie zależnych Gender i Income_Category}
+# data %>% 
+#   summarize(n = n(), .by = c(Income_Category, Gender)) %>% 
+#   mutate(Gender = fct_recode(Gender, Kobieta = 'F', Mężczyzna = 'M')) %>% 
+#   plot_ly(x = ~Income_Category, 
+#           y = ~n, 
+#           color = ~Gender, 
+#           colors = c('red', 'royalblue'),
+#           type = 'bar',
+#           text = ~paste0("Liczba klientów: ", n),
+#           hoverinfo = 'text') %>%
+#   layout(
+#     title = 'Liczba klientów według progów dochodu oraz płci',
+#     xaxis = list(
+#       title = 'Próg dochodowy'
+#     ),
+#     yaxis = list(
+#       title = 'Liczba klientów'
+#     ),
+#     legend = list(
+#       title = list(text = 'Płeć klienta'),
+#       x = 0.8,
+#       y = 0.8
+#     )
+#   ) %>%
+#   config(displayModeBar = FALSE)
+
+plot_data <- data %>% 
+   summarize(n = n(), .by = c(Income_Category, Gender)) %>% 
+   mutate(Gender = fct_recode(Gender, Kobieta = 'F', Mężczyzna = 'M'))
+  
+hchart(plot_data, "column", hcaes(x = Income_Category, y = n, group = Gender)) %>%
+  hc_title(text = "Liczba klientów według progów dochodowych i płci") %>%
+  hc_xAxis(title = list(text = "Próg dochodowy"), categories = levels(data$Income_Category)) %>%
+  hc_yAxis(title = list(text = "Liczba klientów")) %>%
+  hc_legend(title = list(text = "Płeć klienta"),
+            layout = 'horizontal',
+            verticalAlign = 'top') %>%
+  hc_colors(c('red', 'royalblue'))
+```
+
+Na powyższym wykresie można zauważyć, że rzeczywiście zachodzi zależność między płcią, a progiem dochodowym. Jak się okazuje, żadna z byłych i obecnych klientek banku nie zarabia więcej, niż 60 tys. UDS rocznie. Widać również istotną dysproporcję w poziomie zarobków kobiet i mężczyzn, chociaż różnica w liczbie przedstawicieli każdej z płci nie jest duża. Warto jednak zwrócić uwagę na fakt, że zarobki niemal 20% kobiet pozostają nieznane.
+
+## Ewaluacja modeli uczenia maszynowego
+
+Decyzja o wybraniu konkretnych rozwiązań ze względu na analizowany problem badawczy
+
+### Przygotowanie danych do procesu uczenia
+
+```{r}
+set.seed(420)
+data_split <- initial_split(data, prop = 0.8, strata = Attrition_Flag)
+train_data <- training(data_split)
+test_data <- testing(data_split)
+
+data_recipe_with_dummy <- recipe(Attrition_Flag ~ ., data = train_data) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_corr(all_numeric_predictors()) %>% 
+  step_zv(all_predictors()) %>% 
+  step_dummy(all_nominal_predictors(), -all_outcomes()) %>% 
+  step_downsample()
+
+data_recipe_without_dummy <- recipe(Attrition_Flag ~ ., data = train_data) %>%
+  #step_normalize(all_numeric_predictors()) %>% 
+  step_downsample()
+
+folds <- vfold_cv(train_data, v = 10, strata = Attrition_Flag)
+```
+
+### Przygotowanie modeli dla wybranych metod
+
+```{r}
+# Regresja logistyczna
+reg_log_model <- logistic_reg(penalty = tune(), mixture = tune()) %>% 
+  set_engine("brulee")
+
+reg_log_params <- parameters(penalty(), mixture())
+reg_log_params <- finalize(reg_log_params, train_data)
+
+# Drzewo decyzyjne
+dec_tree_model <- decision_tree(cost_complexity = tune(), tree_depth = tune(), min_n = tune()) %>% 
+  set_engine("rpart") %>% 
+  set_mode("classification")
+
+dec_tree_params <- parameters(cost_complexity(), tree_depth(), min_n())
+dec_tree_params <- finalize(dec_tree_params, train_data)
+
+# Las losowy
+rf_model <- rand_forest(mtry = tune(), trees = tune(), min_n = tune()) %>% 
+  set_engine("ranger") %>% 
+  set_mode("classification")
+
+rf_params <- parameters(trees(), mtry(), min_n())
+rf_params <- finalize(rf_params, train_data)
+
+# Boosting
+boost_model <- boost_tree(trees = tune(), tree_depth = tune(), learn_rate = tune()) %>% 
+  set_engine("xgboost") %>% 
+  set_mode("classification")
+
+boost_params <- parameters(trees(), tree_depth(), learn_rate())
+boost_params <- finalize(boost_params, train_data)
+
+```
+
+### Kalibracja i uczenie modeli
+
+```{r}
+# Workflow dla regresji logistycznej
+log_reg_workflow <- workflow() %>% 
+  add_recipe(data_recipe_with_dummy) %>% 
+  add_model(reg_log_model)
+
+# Workflow dla lasu losowego
+rf_workflow <- workflow() %>%
+  add_recipe(data_recipe_without_dummy) %>%
+  add_model(rf_model)
+
+# Workflow dla boosting
+boost_workflow <- workflow() %>%
+  add_recipe(data_recipe_with_dummy) %>%
+  add_model(boost_model)
+
+# Workflow dla drzewa decyzyjnego
+dec_tree_workflow <-  workflow() %>% 
+  add_recipe(data_recipe_without_dummy) %>% 
+  add_model(dec_tree_model)
+```
+
+```{r}
+# Paralelizacja
+start <- Sys.time()
+cl <- makeCluster(6, type = 'SOCK')
+registerDoSNOW(cl)
+
+# Tuning lasu losowego
+set.seed(420)
+rf_bayes_tuning <- tune_bayes(
+  rf_workflow,
+  resamples = folds,
+  param_info = rf_params,
+  metrics = metric_set(roc_auc, accuracy),
+  control = control_bayes(no_improve = 10, 
+                          save_pred = TRUE, 
+                          verbose = TRUE, 
+                          parallel_over = "everything",
+                          save_workflow = TRUE)
+)
+
+# Tuning boosting
+set.seed(420)
+boost_bayes_tuning <- tune_bayes(
+  boost_workflow,
+  resamples = folds,
+  param_info = boost_params,
+  metrics = metric_set(roc_auc, accuracy),
+  control = control_bayes(no_improve = 10, 
+                          save_pred = TRUE, 
+                          verbose = TRUE, 
+                          parallel_over = "everything",
+                          save_workflow = TRUE)
+)
+
+# Tuning drzewa decyzyjnego
+set.seed(420)
+dec_tree_bayes_tuning <- tune_bayes(
+  dec_tree_workflow,
+  resamples = folds,
+  param_info = dec_tree_params,
+  metrics = metric_set(roc_auc, accuracy),
+  control = control_bayes(no_improve = 10, 
+                          save_pred = TRUE, 
+                          verbose = TRUE, 
+                          parallel_over = "everything",
+                          save_workflow = TRUE)
+)
+
+# Tuning regresji logistycznej
+set.seed(420)
+log_reg_bayes_tuning <- tune_bayes(
+  log_reg_workflow,
+  resamples = folds,
+  param_info = reg_log_params,
+  metrics = metric_set(roc_auc, accuracy),
+  control = control_bayes(no_improve = 10, 
+                          save_pred = TRUE, 
+                          verbose = TRUE, 
+                          parallel_over = "everything",
+                          save_workflow = TRUE)
+)
+
+# Zakończenie
+stopCluster(cl)
+koniec <- Sys.time()
+```
+
+```{r}
+# Wybór najlepszych parametrów dal każdego z modeli
+rf_best <- select_best(rf_bayes_tuning, metric = 'accuracy')
+final_rf <- finalize_workflow(rf_workflow, rf_best)
+
+boost_best <- select_best(boost_bayes_tuning, metric = 'accuracy')
+final_boost <- finalize_workflow(boost_workflow, boost_best)
+
+dec_tree_best <- select_best(dec_tree_bayes_tuning, metric = 'accuracy')
+final_dec_tree <- finalize_workflow(dec_tree_workflow, dec_tree_best)
+
+log_reg_best <- select_best(log_reg_bayes_tuning, metric = 'accuracy')
+final_log_reg <- finalize_workflow(log_reg_workflow, log_reg_best)
+```
+
+```{r}
+cl <- makeCluster(6, type = 'SOCK')
+registerDoSNOW(cl)
+
+final_rf_fit <- fit(final_rf, data = train_data)
+
+final_boost_fit <- fit(final_boost, data = train_data)
+
+final_dec_tree_fit <- fit(final_dec_tree, data = train_data)
+
+final_log_reg_fit <- fit(final_log_reg, data = train_data)
+
+stopCluster(cl)
+```
+
+```{r}
+# Predykcje
+
+rf_predictions <- predict(final_rf_fit, test_data)
+
+boost_predictions <- predict(final_boost_fit, test_data)
+
+dec_tree_predictions <- predict(final_dec_tree_fit, test_data)
+
+log_reg_predictions <- predict(final_log_reg_fit, test_data)
+
+results <- tibble(
+  truth = test_data$Attrition_Flag,
+  rf_pred = rf_predictions$.pred_class,
+  boost_pred = boost_predictions$.pred_class,
+  dec_tree_pred = dec_tree_predictions$.pred_class,
+  log_reg_pred = log_reg_predictions$.pred_class
+)
+```
+
+```{r}
+# Macierze konfuzji
+conf_mat(results, truth = truth, estimate = rf_pred)
+conf_mat(results, truth = truth, estimate = boost_pred)
+conf_mat(results, truth = truth, estimate = dec_tree_pred)
+conf_mat(results, truth = truth, estimate = log_reg_pred)
+
+```
+
+```{r}
+# Metryki
+
+tuning_results <- as_workflow_set(
+  rf = rf_bayes_tuning,
+  boost = boost_bayes_tuning,
+  dec_tree = dec_tree_bayes_tuning,
+  log_reg = log_reg_bayes_tuning)
+
+metryki_final <- collect_metrics(tuning_results)
+```
+
+```{r}
+# plot results
+library(ggrepel)
+
+autoplot(tuning_results, metric = "accuracy") +
+  geom_text_repel(aes(label = wflow_id)) +
+  theme(legend.position = "none")
+```
+
+```{r}
+autoplot(
+   tuning_results,
+   rank_metric = "accuracy",  # <- how to order models
+   metric = "accuracy",       # <- which metric to visualize
+   select_best = TRUE     # <- one point per workflow
+) +
+   geom_text(aes(y = mean - 1/80, label = wflow_id), angle = 90, hjust = 1) +
+   theme(legend.position = "none")
+```
+
