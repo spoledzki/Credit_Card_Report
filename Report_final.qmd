@@ -40,11 +40,13 @@ editor_options:
 ```{r Wczytanie bibliotek}
 library(tidyverse)
 library(tidymodels)
+library(baguette)
 library(ggcorrplot)
 library(rcompanion)
 library(highcharter)
 library(themis)
 library(doSNOW)
+tidymodels_prefer()
 ```
 
 ```{r Wczytanie danych}
@@ -88,38 +90,38 @@ Informacje o wykorzystywanych zmiennych przedstawiam poniżej.
 
 1.  `CLIENTNUM` - numer identyfikacyjny unikalny dla każdego klienta banku
 2.  `Attrition_Flag` - *zmienna binarna* opisująca status klienta banku, jest to **zmienna zależna** w badaniu, przyjmuje 2 wartości:
-    1.  `Existing Customer` - klient aktywny
-    2.  `Attrited Customer` - klient nieobsługiwany
+    -  `Existing Customer` - klient aktywny
+    -  `Attrited Customer` - klient nieobsługiwany
 3.  `Customer_Age` - *zmienna ilościowa* opisująca wiek klienta
 4.  `Gender` - *zmienna binarna* opisująca płeć klienta, przyjmuje 2 wartości:
-    1.  `F` - kobieta
-    2.  `M` - mężczyzna
+    -  `F` - kobieta
+    -  `M` - mężczyzna
 5.  `Dependent_Count` - *zmienna ilościowa* opisująca liczbę osób, które są na utrzymaniu klienta
 6.  `Education_Level` - *zmienna porządkowa* opisująca wykształcenie klienta, przyjmuje 7 wartości:
-    1.  `Uneducated`
-    2.  `High School`
-    3.  `Graduate`
-    4.  `Post-Graduate`
-    5.  `College`
-    6.  `Doctorate`
-    7.  `Unknown`
+    -  `Uneducated`
+    -  `High School`
+    -  `Graduate`
+    -  `Post-Graduate`
+    -  `College`
+    -  `Doctorate`
+    -  `Unknown`
 7.  `Marital_Status` - *zmienna jakościowa* opisująca stan cywilny klienta, przyjmuje 4 wartości:
-    1.  `Single` - samotny
-    2.  `Married` - pozostający w związku małżeńskim
-    3.  `Divorced` - rozwiedziony
-    4.  `Unknown` - nieznany
+    -  `Single` - samotny
+    -  `Married` - pozostający w związku małżeńskim
+    -  `Divorced` - rozwiedziony
+    -  `Unknown` - nieznany
 8.  `Income_Category` - *zmienna porządkowa* opisująca roczny przychód klienta, przyjmuje 6 wartości:
-    1.  `Less than $40K` - poniżej 40 tys. dolarów
-    2.  `$40K - $60K` - między 40, a 60 tys. dolarów
-    3.  `$60K - $80K` - między 60, a 80 tys. dolarów
-    4.  `$80K - $120K` - między 80, a 120 tys. dolarów
-    5.  `$120K +` - powyżej 120 tys. dolarów
-    6.  `Unknown` - nieznany
+    -  `Less than $40K` - poniżej 40 tys. dolarów
+    -  `$40K - $60K` - między 40, a 60 tys. dolarów
+    -  `$60K - $80K` - między 60, a 80 tys. dolarów
+    -  `$80K - $120K` - między 80, a 120 tys. dolarów
+    -  `$120K +` - powyżej 120 tys. dolarów
+    -  `Unknown` - nieznany
 9.  `Card_Category` - *zmienna porządkowa* opisująca rodzaj posiadanej przez klienta karty kredytowej, przyjmuje 4 wartości:
-    1.  `Blue`
-    2.  `Silver`
-    3.  `Gold`
-    4.  `Platinum`
+    -  `Blue`
+    -  `Silver`
+    -  `Gold`
+    -  `Platinum`
 10. `Months_on_book` - *zmienna ilościowa* opisująca od ilu miesięcy klient jest związany z bankiem
 11. `Total_Relationship_Count` - *zmienna ilościowa* opisująca ile kart kredytowych posiada dany klient
 12. `Months_Inactive_12_mon` - *zmienna ilościowa* opisująca przez ile miesięcy (w ciągu ostatnich 12 miesięcy) klient nie podejmował żadnej aktywności
@@ -155,6 +157,10 @@ ggcorrplot(corr = numeric_data_cor,
            lab_size = 2,
            tl.cex = 8,
            insig = 'pch')
+```
+
+```{r}
+GGally::ggpairs(data, mapping = aes(color = Attrition_Flag), columns = numeric_var_names)
 ```
 
 Na podstawie powyższej wizualizacji zauważyć można trzy silnie dodatnio skorelowane pary zmiennych:
@@ -208,32 +214,6 @@ knitr::kable(non_indep_nominal)
 Jak się okazuje, tylko w przypadku zmiennych płci (`Gender`) i progu dochodowego (`Income_Category`) zależność jest naprawdę silna. Pozostałe wartości są istotnie różne od zera, jednak nie pozwalają na wyciągnięcie pożytecznych wniosków. Martwić może jedynie fakt, że żadna ze zmiennych jakościowych nie ma silnego związku ze zmienną zależną, dzięki czemu nie możemy na tym etapie wskazać żadnej z nich jako istotnego predyktora dla problemu badawczego.
 
 ```{r Wykres dla pary zmiennych silnie zależnych Gender i Income_Category}
-# data %>% 
-#   summarize(n = n(), .by = c(Income_Category, Gender)) %>% 
-#   mutate(Gender = fct_recode(Gender, Kobieta = 'F', Mężczyzna = 'M')) %>% 
-#   plot_ly(x = ~Income_Category, 
-#           y = ~n, 
-#           color = ~Gender, 
-#           colors = c('red', 'royalblue'),
-#           type = 'bar',
-#           text = ~paste0("Liczba klientów: ", n),
-#           hoverinfo = 'text') %>%
-#   layout(
-#     title = 'Liczba klientów według progów dochodu oraz płci',
-#     xaxis = list(
-#       title = 'Próg dochodowy'
-#     ),
-#     yaxis = list(
-#       title = 'Liczba klientów'
-#     ),
-#     legend = list(
-#       title = list(text = 'Płeć klienta'),
-#       x = 0.8,
-#       y = 0.8
-#     )
-#   ) %>%
-#   config(displayModeBar = FALSE)
-
 plot_data <- data %>% 
    summarize(n = n(), .by = c(Income_Category, Gender)) %>% 
    mutate(Gender = fct_recode(Gender, Kobieta = 'F', Mężczyzna = 'M'))
@@ -252,88 +232,148 @@ Na powyższym wykresie można zauważyć, że rzeczywiście zachodzi zależnoś�
 
 ## Ewaluacja modeli uczenia maszynowego
 
-Decyzja o wybraniu konkretnych rozwiązań ze względu na analizowany problem badawczy
+Zmienna zależna w omawianym zbiorze danych jest zmienną typu binarnego - każda z obserwacji może być klientem aktywnym, bądź klientem utraconym. Dziedziną problemu jest zatem klasyfikacja binarna, a w ramach pakietu `parsnip` istnieje wiele implementacji modeli uczenia maszynowego przeznaczonych dla tego typu problemów.
+
+Wybrane przeze mnie rodzaje modeli to:
+- Regresja logistyczna z silnikiem `glmnet`
+- Drzewo decyzyjne z silnikiem `rpart`
+- Las losowy z silnikiem `ranger`
+- Boosting z silnikiem `xgboost`
+- Bagging z silnikiem `C5.0`
+- SVM z jądrem RBF i silnikiem `kernlab`
+- MLP z silnikiem `brulee`
+
+Metody te podzieliłem na 3 zestawy, w zależności od zalecanego preprocessingu, powstaną zatem 3 workflow sety.
 
 ### Przygotowanie danych do procesu uczenia
 
-```{r}
+```{r eval = F}
 set.seed(420)
 data_split <- initial_split(data, prop = 0.8, strata = Attrition_Flag)
 train_data <- training(data_split)
 test_data <- testing(data_split)
 
-data_recipe_with_dummy <- recipe(Attrition_Flag ~ ., data = train_data) %>%
-  step_normalize(all_numeric_predictors()) %>%
+# Dla drzewa, lasu i baggingu
+simple_recipe <- recipe(Attrition_Flag ~ ., data = train_data) %>%
+  step_downsample()
+
+# Dla regresji logistycznej i boostingu z xgboost
+middle_recipe <- recipe(Attrition_Flag ~ ., data = train_data) %>%
   step_corr(all_numeric_predictors()) %>% 
   step_zv(all_predictors()) %>% 
   step_dummy(all_nominal_predictors(), -all_outcomes()) %>% 
   step_downsample()
 
-data_recipe_without_dummy <- recipe(Attrition_Flag ~ ., data = train_data) %>%
-  #step_normalize(all_numeric_predictors()) %>% 
+# Dla SVM i MLP
+complete_recipe <- recipe(Attrition_Flag ~ ., data = train_data) %>%
+  step_corr(all_numeric_predictors()) %>% 
+  step_zv(all_predictors()) %>% 
+  step_YeoJohnson(all_numeric_predictors()) %>% 
+  step_dummy(all_nominal_predictors(), -all_outcomes()) %>% 
+  step_normalize(all_numeric_predictors()) %>% 
   step_downsample()
 
 folds <- vfold_cv(train_data, v = 10, strata = Attrition_Flag)
 ```
 
-### Przygotowanie modeli dla wybranych metod
+### Przygotowanie specyfikacji modeli dla wybranych metod
 
 ```{r}
 # Regresja logistyczna
-reg_log_model <- logistic_reg(penalty = tune(), mixture = tune()) %>% 
-  set_engine("brulee")
-
-reg_log_params <- parameters(penalty(), mixture())
-reg_log_params <- finalize(reg_log_params, train_data)
+log_reg_spec <- logistic_reg(penalty = tune(), 
+                             mixture = tune()) %>% 
+  set_engine('glmnet')
 
 # Drzewo decyzyjne
-dec_tree_model <- decision_tree(cost_complexity = tune(), tree_depth = tune(), min_n = tune()) %>% 
-  set_engine("rpart") %>% 
-  set_mode("classification")
-
-dec_tree_params <- parameters(cost_complexity(), tree_depth(), min_n())
-dec_tree_params <- finalize(dec_tree_params, train_data)
+dec_tree_spec <- decision_tree(cost_complexity = tune(), 
+                               tree_depth = tune(), 
+                               min_n = tune()) %>% 
+  set_engine('rpart') %>% 
+  set_mode('classification')
 
 # Las losowy
-rf_model <- rand_forest(mtry = tune(), trees = tune(), min_n = tune()) %>% 
-  set_engine("ranger") %>% 
-  set_mode("classification")
+rf_spec <- rand_forest(mtry = tune(), 
+                       trees = tune(), 
+                       min_n = tune()) %>% 
+  set_engine('ranger', importance = 'impurity') %>% 
+  set_mode('classification')
 
-rf_params <- parameters(trees(), mtry(), min_n())
-rf_params <- finalize(rf_params, train_data)
+params_rf <- parameters(trees(), mtry(), min_n())
+params_rf <- finalize(params_rf, train_data)
 
 # Boosting
-boost_model <- boost_tree(trees = tune(), tree_depth = tune(), learn_rate = tune()) %>% 
-  set_engine("xgboost") %>% 
-  set_mode("classification")
+boost_spec <- boost_tree(trees = tune(), 
+                         tree_depth = tune(), 
+                         learn_rate = tune(),
+                         mtry = tune(),
+                         min_n = tune(),
+                         loss_reduction = tune()) %>% 
+  set_engine("xgboost", params = list(objective = "binary:logistic")) %>% 
+  set_mode('classification')
 
-boost_params <- parameters(trees(), tree_depth(), learn_rate())
-boost_params <- finalize(boost_params, train_data)
+params_boost <- parameters(trees(), tree_depth(), learn_rate(), mtry(), min_n(), loss_reduction())
+params_boost <- finalize(params_boost, train_data)
 
+# Bagging
+bag_spec <- bag_tree(min_n = tune()) %>% 
+  set_engine('C5.0') %>% 
+  set_mode('classification')
+
+# MLP
+nnet_spec <- mlp(hidden_units = tune(), 
+                 penalty = tune(), 
+                 epochs = tune()) %>%
+  set_engine('brulee') %>% 
+  set_mode('classification')
+
+nnet_param <- nnet_spec %>% 
+   extract_parameter_set_dials() %>% 
+   update(hidden_units = hidden_units(c(1, 27)))
+
+# SVM
+svm_spec <- svm_rbf(cost = tune(), 
+                    rbf_sigma = tune(), 
+                    margin = tune()) %>% 
+  set_engine('kernlab') %>% 
+  set_mode('classification')
 ```
 
 ### Kalibracja i uczenie modeli
 
 ```{r}
-# Workflow dla regresji logistycznej
-log_reg_workflow <- workflow() %>% 
-  add_recipe(data_recipe_with_dummy) %>% 
-  add_model(reg_log_model)
+# Przepływ pracy dla drzewa decyzyjnego, lasu losowego i baggingu
+trees_wflow <- workflow_set(
+  preproc = list(simple = simple_recipe),
+  models = list(dec_tree = dec_tree_spec, 
+                random_forest = rf_spec,
+                bagging = bag_spec)
+)
 
-# Workflow dla lasu losowego
-rf_workflow <- workflow() %>%
-  add_recipe(data_recipe_without_dummy) %>%
-  add_model(rf_model)
+trees_wflow <- trees_wflow %>% 
+  option_add(param_info = params_rf, id = "simple_random_forest")
 
-# Workflow dla boosting
-boost_workflow <- workflow() %>%
-  add_recipe(data_recipe_with_dummy) %>%
-  add_model(boost_model)
+# Przepływ pracy dla regresji logistycznej i boostingu
+xgb_lr_wflow <- workflow_set(
+  preproc = list(middle = middle_recipe),
+  models = list(xgboost = boost_spec,
+                log_reg = log_reg_spec)
+)
 
-# Workflow dla drzewa decyzyjnego
-dec_tree_workflow <-  workflow() %>% 
-  add_recipe(data_recipe_without_dummy) %>% 
-  add_model(dec_tree_model)
+xgb_lr_wflow <- xgb_lr_wflow %>% 
+  option_add(param_info = params_boost, id = "middle_xgboost")
+
+# Przepływ pracy dla SVM i MLP
+svm_mlp_wflow <- workflow_set(
+  preproc = list(complete = complete_recipe),
+  models = list(SVM = svm_spec,
+                neural_network = nnet_spec)
+)
+
+svm_mlp_wflow <- svm_mlp_wflow %>% 
+   option_add(param_info = nnet_param, id = "complete_neural_network")
+
+all_workflows <- bind_rows(trees_wflow, xgb_lr_wflow, svm_mlp_wflow) %>% 
+  mutate(wflow_id = gsub("(simple_)|(middle_)|(complete_)", "", wflow_id))
 ```
 
 ```{r}
@@ -342,66 +382,43 @@ start <- Sys.time()
 cl <- makeCluster(6, type = 'SOCK')
 registerDoSNOW(cl)
 
-# Tuning lasu losowego
-set.seed(420)
-rf_bayes_tuning <- tune_bayes(
-  rf_workflow,
-  resamples = folds,
-  param_info = rf_params,
-  metrics = metric_set(roc_auc, accuracy),
-  control = control_bayes(no_improve = 10, 
+bayes_ctrl <- control_bayes(no_improve = 10, 
                           save_pred = TRUE, 
                           verbose = TRUE, 
                           parallel_over = "everything",
                           save_workflow = TRUE)
-)
 
-# Tuning boosting
-set.seed(420)
-boost_bayes_tuning <- tune_bayes(
-  boost_workflow,
-  resamples = folds,
-  param_info = boost_params,
-  metrics = metric_set(roc_auc, accuracy),
-  control = control_bayes(no_improve = 10, 
-                          save_pred = TRUE, 
-                          verbose = TRUE, 
-                          parallel_over = "everything",
-                          save_workflow = TRUE)
-)
-
-# Tuning drzewa decyzyjnego
-set.seed(420)
-dec_tree_bayes_tuning <- tune_bayes(
-  dec_tree_workflow,
-  resamples = folds,
-  param_info = dec_tree_params,
-  metrics = metric_set(roc_auc, accuracy),
-  control = control_bayes(no_improve = 10, 
-                          save_pred = TRUE, 
-                          verbose = TRUE, 
-                          parallel_over = "everything",
-                          save_workflow = TRUE)
-)
-
-# Tuning regresji logistycznej
-set.seed(420)
-log_reg_bayes_tuning <- tune_bayes(
-  log_reg_workflow,
-  resamples = folds,
-  param_info = reg_log_params,
-  metrics = metric_set(roc_auc, accuracy),
-  control = control_bayes(no_improve = 10, 
-                          save_pred = TRUE, 
-                          verbose = TRUE, 
-                          parallel_over = "everything",
-                          save_workflow = TRUE)
-)
+bayes_results <- all_workflows %>% 
+  workflow_map(
+    fn = 'tune_bayes',
+    verbose = TRUE,
+    seed = 420,
+    control = bayes_ctrl,
+    resamples = folds
+  )
 
 # Zakończenie
 stopCluster(cl)
 koniec <- Sys.time()
 ```
+
+```{r}
+bayes_results %>% 
+  rank_results() %>% 
+  filter(.metric == 'accuracy')
+
+autoplot(
+   bayes_results,
+   rank_metric = "accuracy",  # <- how to order models
+   metric = "accuracy",       # <- which metric to visualize
+   select_best = TRUE     # <- one point per workflow
+) +
+   geom_text(aes(y = mean - std_err - 1/350, label = wflow_id), angle = 90, hjust = 1) +
+   lims(y = c(0.895, 0.975)) +
+   theme(legend.position = "none")
+```
+
+Poniżej do poprawy
 
 ```{r}
 # Wybór najlepszych parametrów dal każdego z modeli
