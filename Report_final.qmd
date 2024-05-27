@@ -1,5 +1,6 @@
 ---
 title: "Klasyfikacja klientów banku pod względem rezygnacji z posiadania karty kredytowej"
+subtitle: "Projekt zaliczeniowy - Eksploracja Danych"
 author: "Szymon Olędzki"
 language: 'polski.yml'
 format:
@@ -42,7 +43,6 @@ library(tidyverse)
 library(tidymodels)
 library(baguette)
 library(ggcorrplot)
-library(rcompanion)
 library(highcharter)
 library(themis)
 library(doSNOW)
@@ -78,26 +78,34 @@ Tu będzie kilka fatów i ciekawostek o kartach kredytowych w USA.
 
 ## Problem badawczy
 
-Opis problemu badawczego
-
 Celem niniejszego projektu jest budowa optymalnego modelu klasyfikacyjnego, którego zadaniem będzie predykcja, czy dany klient banku zrezygnuje z posiadania karty kredytowej. Zagadnienie to jest biznesowo istotne dla możliwie skutecznego przeciwdziałania utracie klientów.
 
 ## Zbiór danych
 
-Zbiór danych [Credit Card Churn Prediction](https://www.kaggle.com/datasets/anwarsan/credit-card-bank-churn/data) pochodzi z serwisu Kaggle. Zawiera informacje o 10127 klientach banku, u których na podstawie 20 zmiennych określono fakt posiadania przynajmniej jednej karty kredytowej - jest to 21 zmienna w zbiorze.
+Zbiór danych [Credit Card Churn Prediction](https://www.kaggle.com/datasets/anwarsan/credit-card-bank-churn/data) pochodzi z serwisu Kaggle. Zawiera informacje o 10127 klientach banku, u których na podstawie 19 zmiennych określono fakt posiadania przynajmniej jednej karty kredytowej - jest to 20 zmienna w zbiorze.
 
 Informacje o wykorzystywanych zmiennych przedstawiam poniżej.
 
-1.  `CLIENTNUM` - numer identyfikacyjny unikalny dla każdego klienta banku
-2.  `Attrition_Flag` - *zmienna binarna* opisująca status klienta banku, jest to **zmienna zależna** w badaniu, przyjmuje 2 wartości:
+::: {.panel-tabset}
+
+## Zmienne jakościowe
+
+1. `Attrition_Flag` - *zmienna binarna* opisująca status klienta banku, jest to **zmienna zależna** w badaniu, przyjmuje 2 wartości:
     -  `Existing Customer` - klient aktywny
-    -  `Attrited Customer` - klient nieobsługiwany
-3.  `Customer_Age` - *zmienna ilościowa* opisująca wiek klienta
-4.  `Gender` - *zmienna binarna* opisująca płeć klienta, przyjmuje 2 wartości:
+    -  `Attrited Customer` - klient utracony
+2. `Gender` - *zmienna binarna* opisująca płeć klienta, przyjmuje 2 wartości:
     -  `F` - kobieta
     -  `M` - mężczyzna
-5.  `Dependent_Count` - *zmienna ilościowa* opisująca liczbę osób, które są na utrzymaniu klienta
-6.  `Education_Level` - *zmienna porządkowa* opisująca wykształcenie klienta, przyjmuje 7 wartości:
+3. `Marital_Status` - *zmienna jakościowa* opisująca stan cywilny klienta, przyjmuje 4 wartości:
+    -  `Single` - samotny
+    -  `Married` - pozostający w związku małżeńskim
+    -  `Divorced` - rozwiedziony
+    -  `Unknown` - nieznany
+
+
+## Zmienne porządkowe
+
+1. `Education_Level` - *zmienna porządkowa* opisująca wykształcenie klienta, przyjmuje 7 wartości:
     -  `Uneducated`
     -  `High School`
     -  `Graduate`
@@ -105,35 +113,37 @@ Informacje o wykorzystywanych zmiennych przedstawiam poniżej.
     -  `College`
     -  `Doctorate`
     -  `Unknown`
-7.  `Marital_Status` - *zmienna jakościowa* opisująca stan cywilny klienta, przyjmuje 4 wartości:
-    -  `Single` - samotny
-    -  `Married` - pozostający w związku małżeńskim
-    -  `Divorced` - rozwiedziony
-    -  `Unknown` - nieznany
-8.  `Income_Category` - *zmienna porządkowa* opisująca roczny przychód klienta, przyjmuje 6 wartości:
+2. `Income_Category` - *zmienna porządkowa* opisująca roczny przychód klienta, przyjmuje 6 wartości:
     -  `Less than $40K` - poniżej 40 tys. dolarów
     -  `$40K - $60K` - między 40, a 60 tys. dolarów
     -  `$60K - $80K` - między 60, a 80 tys. dolarów
     -  `$80K - $120K` - między 80, a 120 tys. dolarów
     -  `$120K +` - powyżej 120 tys. dolarów
     -  `Unknown` - nieznany
-9.  `Card_Category` - *zmienna porządkowa* opisująca rodzaj posiadanej przez klienta karty kredytowej, przyjmuje 4 wartości:
+3. `Card_Category` - *zmienna porządkowa* opisująca rodzaj posiadanej przez klienta karty kredytowej, przyjmuje 4 wartości:
     -  `Blue`
     -  `Silver`
     -  `Gold`
     -  `Platinum`
-10. `Months_on_book` - *zmienna ilościowa* opisująca od ilu miesięcy klient jest związany z bankiem
-11. `Total_Relationship_Count` - *zmienna ilościowa* opisująca ile kart kredytowych posiada dany klient
-12. `Months_Inactive_12_mon` - *zmienna ilościowa* opisująca przez ile miesięcy (w ciągu ostatnich 12 miesięcy) klient nie podejmował żadnej aktywności
-13. `Contacts_Count_12_mon` - *zmienna ilościowa* opisująca ile razy w ciągu ostatnich 12 miesięcy bank kontaktował się z klientem
-14. `Credit_Limit` - *zmienna ilościowa* opisująca limit kredytowy na karcie klienta
-15. `Total_Revolving_Bal` - *zmienna ilościowa* opisująca całkowite saldo odnawialne na karcie klienta
-16. `Avg_Open_To_Buy` - *zmienna ilościowa* opisująca średnią różnicę między limitem kredytowym a stanem konta klienta w ciągu ostatnich 12 miesięcy
-17. `Total_Amt_Chng_Q4_Q1` - *zmienna ilościowa* opisująca zmianę w kwotach dokonywanych transakcji, porównanie 4 kwartału do 1 kwartału.
-18. `Total_Trans_Amt` - *zmienna ilościowa* opisująca sumę dokonanych transakcji z ostatnich 12 miesięcy
-19. `Total_Trans_Ct` - *zmienna ilościowa* opisująca liczbę dokonanych transakcji z ostatnich 12 miesięcy
-20. `Total_Ct_Chng_Q4_Q1` - *zmienna ilościowa* opisująca zmianę w liczbie dokonywanych transakcji, porównanie 4 kwartału do 1 kwartału.
-21. `Avg_Utilization_Ratio` - *zmienna ilościowa* opisująca średni wskaźnik wykorzystania środków z limitu karty kredytowej
+
+## Zmienne ilościowe
+
+1. `Customer_Age` - *zmienna ilościowa* opisująca wiek klienta
+2. `Dependent_Count` - *zmienna ilościowa* opisująca liczbę osób, które pozostają na utrzymaniu klienta
+3. `Months_on_book` - *zmienna ilościowa* opisująca od ilu miesięcy klient jest związany z bankiem
+4. `Total_Relationship_Count` - *zmienna ilościowa* opisująca ile kart kredytowych posiada dany klient
+5. `Months_Inactive_12_mon` - *zmienna ilościowa* opisująca przez ile miesięcy (w ciągu ostatnich 12 miesięcy) klient nie podejmował żadnej aktywności
+6. `Contacts_Count_12_mon` - *zmienna ilościowa* opisująca ile razy w ciągu ostatnich 12 miesięcy bank kontaktował się z klientem
+7. `Credit_Limit` - *zmienna ilościowa* opisująca limit kredytowy na karcie klienta
+8. `Total_Revolving_Bal` - *zmienna ilościowa* opisująca całkowite saldo odnawialne na karcie klienta
+9. `Avg_Open_To_Buy` - *zmienna ilościowa* opisująca średnią różnicę między limitem kredytowym a stanem konta klienta w ciągu ostatnich 12 miesięcy
+10. `Total_Amt_Chng_Q4_Q1` - *zmienna ilościowa* opisująca zmianę w kwotach dokonywanych transakcji, porównanie 4 kwartału do 1 kwartału.
+11. `Total_Trans_Amt` - *zmienna ilościowa* opisująca sumę dokonanych transakcji z ostatnich 12 miesięcy
+12. `Total_Trans_Ct` - *zmienna ilościowa* opisująca liczbę dokonanych transakcji z ostatnich 12 miesięcy
+13. `Total_Ct_Chng_Q4_Q1` - *zmienna ilościowa* opisująca zmianę w liczbie dokonywanych transakcji, porównanie 4 kwartału do 1 kwartału.
+14. `Avg_Utilization_Ratio` - *zmienna ilościowa* opisująca średni wskaźnik wykorzystania środków z limitu karty kredytowej
+
+:::
 
 ### Przygotowanie danych do dalszej pracy
 
@@ -157,10 +167,6 @@ ggcorrplot(corr = numeric_data_cor,
            lab_size = 2,
            tl.cex = 8,
            insig = 'pch')
-```
-
-```{r}
-GGally::ggpairs(data, mapping = aes(color = Attrition_Flag), columns = numeric_var_names)
 ```
 
 Na podstawie powyższej wizualizacji zauważyć można trzy silnie dodatnio skorelowane pary zmiennych:
@@ -202,7 +208,7 @@ non_indep_nominal <- nominal_vars_df %>%
 v.cramer <- numeric()
 
 for (i in 1:nrow(non_indep_nominal)) {
-  test <- cramerV(data[[non_indep_nominal[i,1]]], data[[non_indep_nominal[i,2]]])
+  test <- rcompanion::cramerV(data[[non_indep_nominal[i,1]]], data[[non_indep_nominal[i,2]]])
   v.cramer <- c(v.cramer, test)
 }
 
@@ -235,6 +241,7 @@ Na powyższym wykresie można zauważyć, że rzeczywiście zachodzi zależnoś�
 Zmienna zależna w omawianym zbiorze danych jest zmienną typu binarnego - każda z obserwacji może być klientem aktywnym, bądź klientem utraconym. Dziedziną problemu jest zatem klasyfikacja binarna, a w ramach pakietu `parsnip` istnieje wiele implementacji modeli uczenia maszynowego przeznaczonych dla tego typu problemów.
 
 Wybrane przeze mnie rodzaje modeli to:
+
 - Regresja logistyczna z silnikiem `glmnet`
 - Drzewo decyzyjne z silnikiem `rpart`
 - Las losowy z silnikiem `ranger`
@@ -247,7 +254,7 @@ Metody te podzieliłem na 3 zestawy, w zależności od zalecanego preprocessingu
 
 ### Przygotowanie danych do procesu uczenia
 
-```{r eval = F}
+```{r Podzia zbioru i receptury, eval=FALSE, echo=TRUE}
 set.seed(420)
 data_split <- initial_split(data, prop = 0.8, strata = Attrition_Flag)
 train_data <- training(data_split)
@@ -274,11 +281,12 @@ complete_recipe <- recipe(Attrition_Flag ~ ., data = train_data) %>%
   step_downsample()
 
 folds <- vfold_cv(train_data, v = 10, strata = Attrition_Flag)
+metrics <- metric_set(accuracy, bal_accuracy, kap, j_index)
 ```
 
 ### Przygotowanie specyfikacji modeli dla wybranych metod
 
-```{r}
+```{r Specyfikacja modeli, eval=FALSE, echo=TRUE}
 # Regresja logistyczna
 log_reg_spec <- logistic_reg(penalty = tune(), 
                              mixture = tune()) %>% 
@@ -332,15 +340,14 @@ nnet_param <- nnet_spec %>%
 
 # SVM
 svm_spec <- svm_rbf(cost = tune(), 
-                    rbf_sigma = tune(), 
-                    margin = tune()) %>% 
+                    rbf_sigma = tune()) %>% 
   set_engine('kernlab') %>% 
   set_mode('classification')
 ```
 
 ### Kalibracja i uczenie modeli
 
-```{r}
+```{r Tworzenie przepływów, eval=FALSE, echo=TRUE}
 # Przepływ pracy dla drzewa decyzyjnego, lasu losowego i baggingu
 trees_wflow <- workflow_set(
   preproc = list(simple = simple_recipe),
@@ -350,7 +357,9 @@ trees_wflow <- workflow_set(
 )
 
 trees_wflow <- trees_wflow %>% 
-  option_add(param_info = params_rf, id = "simple_random_forest")
+  option_add(param_info = params_dec_tree, id = "simple_dec_tree") %>% 
+  option_add(param_info = params_rf, id = "simple_random_forest") %>% 
+  option_add(param_info = params_bag, id = "simple_bagging")
 
 # Przepływ pracy dla regresji logistycznej i boostingu
 xgb_lr_wflow <- workflow_set(
@@ -360,7 +369,8 @@ xgb_lr_wflow <- workflow_set(
 )
 
 xgb_lr_wflow <- xgb_lr_wflow %>% 
-  option_add(param_info = params_boost, id = "middle_xgboost")
+  option_add(param_info = params_boost, id = "middle_xgboost") %>% 
+  option_add(param_info = params_log_reg, id = "middle_log_reg")
 
 # Przepływ pracy dla SVM i MLP
 svm_mlp_wflow <- workflow_set(
@@ -376,25 +386,28 @@ all_workflows <- bind_rows(trees_wflow, xgb_lr_wflow, svm_mlp_wflow) %>%
   mutate(wflow_id = gsub("(simple_)|(middle_)|(complete_)", "", wflow_id))
 ```
 
-```{r}
+```{r Tuning Bayes, eval=FALSE, echo=TRUE}
 # Paralelizacja
 start <- Sys.time()
-cl <- makeCluster(6, type = 'SOCK')
+cl <- makeCluster(6, type = "SOCK")
 registerDoSNOW(cl)
 
-bayes_ctrl <- control_bayes(no_improve = 10, 
-                          save_pred = TRUE, 
-                          verbose = TRUE, 
-                          parallel_over = "everything",
-                          save_workflow = TRUE)
+bayes_ctrl <- control_bayes(
+  no_improve = 10,
+  save_pred = TRUE,
+  verbose = TRUE,
+  parallel_over = "everything",
+  save_workflow = TRUE
+)
 
-bayes_results <- all_workflows %>% 
+bayes_results <- all_workflows %>%
   workflow_map(
-    fn = 'tune_bayes',
+    fn = "tune_bayes",
     verbose = TRUE,
     seed = 420,
     control = bayes_ctrl,
-    resamples = folds
+    resamples = folds,
+    metrics = metrics
   )
 
 # Zakończenie
@@ -402,16 +415,24 @@ stopCluster(cl)
 koniec <- Sys.time()
 ```
 
+```{r, eval=FALSE}
+saveRDS(bayes_results, file = 'output/bayes_results.rds')
+```
+
 ```{r}
-bayes_results %>% 
-  rank_results() %>% 
-  filter(.metric == 'accuracy')
+bayes_results <- readRDS(file = 'output/bayes_results.rds')
+```
+
+```{r Plot Bayes results, echo=TRUE}
+# bayes_results %>% 
+#   rank_results() %>% 
+#   filter(.metric == 'accuracy')
 
 autoplot(
    bayes_results,
-   rank_metric = "accuracy",  # <- how to order models
-   metric = "accuracy",       # <- which metric to visualize
-   select_best = TRUE     # <- one point per workflow
+   rank_metric = "accuracy",
+   metric = "accuracy", 
+   select_best = TRUE
 ) +
    geom_text(aes(y = mean - std_err - 1/350, label = wflow_id), angle = 90, hjust = 1) +
    lims(y = c(0.895, 0.975)) +
@@ -420,7 +441,7 @@ autoplot(
 
 Poniżej do poprawy
 
-```{r}
+```{r eval=FALSE}
 # Wybór najlepszych parametrów dal każdego z modeli
 rf_best <- select_best(rf_bayes_tuning, metric = 'accuracy')
 final_rf <- finalize_workflow(rf_workflow, rf_best)
@@ -435,7 +456,7 @@ log_reg_best <- select_best(log_reg_bayes_tuning, metric = 'accuracy')
 final_log_reg <- finalize_workflow(log_reg_workflow, log_reg_best)
 ```
 
-```{r}
+```{r eval=FALSE}
 cl <- makeCluster(6, type = 'SOCK')
 registerDoSNOW(cl)
 
@@ -450,7 +471,7 @@ final_log_reg_fit <- fit(final_log_reg, data = train_data)
 stopCluster(cl)
 ```
 
-```{r}
+```{r eval=FALSE}
 # Predykcje
 
 rf_predictions <- predict(final_rf_fit, test_data)
@@ -470,7 +491,7 @@ results <- tibble(
 )
 ```
 
-```{r}
+```{r eval=FALSE}
 # Macierze konfuzji
 conf_mat(results, truth = truth, estimate = rf_pred)
 conf_mat(results, truth = truth, estimate = boost_pred)
@@ -479,7 +500,7 @@ conf_mat(results, truth = truth, estimate = log_reg_pred)
 
 ```
 
-```{r}
+```{r eval=FALSE}
 # Metryki
 
 tuning_results <- as_workflow_set(
@@ -491,7 +512,7 @@ tuning_results <- as_workflow_set(
 metryki_final <- collect_metrics(tuning_results)
 ```
 
-```{r}
+```{r eval=FALSE}
 # plot results
 library(ggrepel)
 
@@ -500,7 +521,7 @@ autoplot(tuning_results, metric = "accuracy") +
   theme(legend.position = "none")
 ```
 
-```{r}
+```{r eval=FALSE}
 autoplot(
    tuning_results,
    rank_metric = "accuracy",  # <- how to order models
