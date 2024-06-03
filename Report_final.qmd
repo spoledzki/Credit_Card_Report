@@ -10,7 +10,7 @@ format:
   html:
     theme:
       light: cosmo
-    highlight-style: nord
+    highlight-style: ayu-mirage
     smooth-scroll: true
     code-fold: true
     code-tools:
@@ -25,7 +25,6 @@ format:
         href: https://www.kaggle.com/datasets/anwarsan/credit-card-bank-churn/data?select=credit_card_churn.csv
     code-block-bg: true
     code-block-border-left: "#31BAE9"
-    code-summary: "Pokaż kod"
     code-overflow: wrap
     toc: true
     toc-title: "Spis treści"
@@ -50,10 +49,11 @@ library(highcharter)
 library(themis)
 library(doSNOW)
 library(vip)
+library(gt)
 tidymodels_prefer()
 ```
 
-```{r Wczytanie danych}
+```{r Wczytanie oczyszczonych danych}
 data <- read.csv("data/clean_data.csv")
 ```
 
@@ -117,7 +117,7 @@ plot_data <- data %>%
 >
 > --- <cite>Andrzej Majewski</cite>
 
-## Karty kredytowe w USA
+# Karty kredytowe w USA
 
 W 1958 roku Bank of America wprowadził na rynek nowość, która okazała się kamieniem milowym w rozwoju nowoczesnej bankowości. Do 60 tys. klientów mieszkających we Fresno w Kalifornii trafiły gotowe do użycia karty noszące znak BankAmericard. Chociaż idea bezgotówkowych zakupów na kredyt nie była już wówczas innowacją, to test przeprowadzony 60 lat temu opierał się na nowym pomyśle.
 
@@ -131,31 +131,33 @@ Obecnie jednak coraz więcej Amerykanów w każdym wieku zaczyna mieć problemy 
 
 Zgodnie z danymi Banku Rezerw Federalnych w przypadku długów, poza kredytami studenckimi, wskaźniki spłacalności od pandemii koronawirusa maleją. Teraz zaległości z tytułu kart kredytowych przekroczyły poziom sprzed COVID-19 i wciąż rosną. Np. te, których termin spłaty minął 90 dni temu, osiągnęły poziom 10,7 proc. To najwyższy poziom od 2012 roku. [za @Bankier2]
 
-## Problem badawczy
+# Problem badawczy
 
 Celem niniejszego projektu jest budowa optymalnego modelu klasyfikacyjnego, którego zadaniem będzie predykcja, czy dany klient banku zrezygnuje z posiadania karty kredytowej. Zagadnienie to jest biznesowo istotne dla możliwie skutecznego przeciwdziałania utracie klientów.
 
-## Zbiór danych
+# Zbiór danych
 
-Zbiór danych Credit Card Churn Prediction pochodzi z serwisu Kaggle [@Credit_Card_Churn_Prediction]. Zawiera informacje o 10127 klientach banku, u których na podstawie 19 zmiennych określono fakt posiadania przynajmniej jednej karty kredytowej - jest to 20 zmienna w zbiorze.
+Zbiór danych Credit Card Churn Prediction pochodzi z serwisu Kaggle [@Credit_Card_Churn_Prediction]. Zawiera informacje o 10127 klientach banku, dla których na podstawie 19 zmiennych określono fakt posiadania karty kredytowej - jest to 20 zmienna w zbiorze.
 
-Informacje o wykorzystywanych zmiennych przedstawiam poniżej.
+## Charakterystyka zmiennych
 
 ::: panel-tabset
 ## Zmienne jakościowe
 
-1.  `Attrition_Flag` - *zmienna binarna* opisująca status klienta banku, jest to **zmienna zależna** w badaniu, przyjmuje 2 wartości:
+1.  `Attrition_Flag` - *zmienna binarna* opisująca status klienta banku, jest to **zmienna zależna**, przyjmuje 2 wartości:
     -   `Existing Customer` - klient aktywny
     -   `Attrited Customer` - klient utracony
 
 ```{r Wykres słupkowy zmiennej Attrition_Flag}
+#| label: fig-Attrition_Flag
+#| fig-cap: Liczba klientów według statusu klienta
+
 plot_data %>%
   summarize(n = n(), .by = Attrition_Flag) %>%
   hchart("column", hcaes(x = Attrition_Flag, y = n)) %>%
-  hc_title(text = "Liczba klientów według statusu klienta") %>%
   hc_xAxis(title = list(text = "Status klienta"), categories = levels(plot_data$Attrition_Flag)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
-  hc_colors(c("royalblue"))
+  hc_colors(c("#31BAE9"))
 ```
 
 2.  `Gender` - *zmienna binarna* opisująca płeć klienta, przyjmuje 2 wartości:
@@ -166,22 +168,26 @@ plot_data %>%
 ### Wykres słupkowy
 
 ```{r Wykres słupkowy zmiennej Gender}
+#| label: fig-Gender
+#| fig-cap: Liczba klientów według płci
+
 plot_data %>%
   summarize(n = n(), .by = Gender) %>%
   hchart("column", hcaes(x = Gender, y = n)) %>%
-  hc_title(text = "Liczba klientów według płci") %>%
   hc_xAxis(title = list(text = "Próg dochodowy"), categories = levels(plot_data$Gender)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
-  hc_colors(c("royalblue"))
+  hc_colors(c("#31BAE9"))
 ```
 
 ### Według zmiennej zależnej
 
 ```{r Wykres słupkowy zmiennej Gender wg zmiennej zależnej}
+#| label: fig-Gender_AF
+#| fig-cap: Liczba klientów według płci i statusu klienta
+
 plot_data %>%
   summarize(n = n(), .by = c(Attrition_Flag, Gender)) %>%
   hchart("column", hcaes(x = Gender, y = n, group = Attrition_Flag)) %>%
-  hc_title(text = "Liczba klientów według płci i statusu klienta") %>%
   hc_xAxis(title = list(text = "Płeć"), categories = levels(plot_data$Gender)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
   hc_legend(
@@ -189,7 +195,7 @@ plot_data %>%
     layout = "horizontal",
     verticalAlign = "top"
   ) %>%
-  hc_colors(c("red", "royalblue"))
+  hc_colors(c("#E96031", "#31BAE9"))
 ```
 :::
 
@@ -203,22 +209,27 @@ plot_data %>%
 ### Wykres słupkowy
 
 ```{r Wykres słupkowy zmiennej Marital_Status}
+#| label: fig-Marital_Status
+#| fig-cap: Liczba klientów według stanu cywilnego
+
 plot_data %>%
   summarize(n = n(), .by = Marital_Status) %>%
   hchart("column", hcaes(x = Marital_Status, y = n)) %>%
   hc_title(text = "Liczba klientów według stanu cywilnego") %>%
   hc_xAxis(title = list(text = "Stan cywilny klienta"), categories = levels(plot_data$Marital_Status)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
-  hc_colors(c("royalblue"))
+  hc_colors(c("#31BAE9"))
 ```
 
 ### Według zmiennej zależnej
 
 ```{r Wykres słupkowy zmiennej Marital_Status wg zmiennej zależnej}
+#| label: fig-Marital_Status_AF
+#| fig-cap: Liczba klientów według stanu cywilnego i statusu klienta
+
 plot_data %>%
   summarize(n = n(), .by = c(Attrition_Flag, Marital_Status)) %>%
   hchart("column", hcaes(x = Marital_Status, y = n, group = Attrition_Flag)) %>%
-  hc_title(text = "Liczba klientów według stanu cywilnego i statusu klienta") %>%
   hc_xAxis(title = list(text = "Stan cywilny klienta"), categories = levels(plot_data$Marital_Status)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
   hc_legend(
@@ -226,7 +237,7 @@ plot_data %>%
     layout = "horizontal",
     verticalAlign = "top"
   ) %>%
-  hc_colors(c("red", "royalblue"))
+  hc_colors(c("#E96031", "#31BAE9"))
 ```
 :::
 
@@ -245,22 +256,26 @@ plot_data %>%
 ### Wykres słupkowy
 
 ```{r Wykres słupkowy zmiennej Education_Level}
+#| label: fig-Education_Level
+#| fig-cap: Liczba klientów według wykształcenia
+
 plot_data %>%
   summarize(n = n(), .by = Education_Level) %>%
   hchart("column", hcaes(x = Education_Level, y = n)) %>%
-  hc_title(text = "Liczba klientów według płci") %>%
   hc_xAxis(title = list(text = "Wykształcenie klienta"), categories = levels(plot_data$Education_Level)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
-  hc_colors(c("royalblue"))
+  hc_colors(c("#31BAE9"))
 ```
 
 ### Według zmiennej zależnej
 
 ```{r Wykres słupkowy zmiennej Education_Level wg zmiennej zależnej}
+#| label: fig-Education_Level_AF
+#| fig-cap: Liczba klientów według wykształcenia i statusu klienta
+
 plot_data %>%
   summarize(n = n(), .by = c(Attrition_Flag, Education_Level)) %>%
   hchart("column", hcaes(x = Education_Level, y = n, group = Attrition_Flag)) %>%
-  hc_title(text = "Liczba klientów według płci i statusu klienta") %>%
   hc_xAxis(title = list(text = "Wykształcenie klienta"), categories = levels(plot_data$Education_Level)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
   hc_legend(
@@ -268,7 +283,7 @@ plot_data %>%
     layout = "horizontal",
     verticalAlign = "top"
   ) %>%
-  hc_colors(c("red", "royalblue"))
+  hc_colors(c("#E96031", "#31BAE9"))
 ```
 :::
 
@@ -284,22 +299,26 @@ plot_data %>%
 ### Wykres słupkowy
 
 ```{r Wykres słupkowy zmiennej Income_Category}
+#| label: fig-Income_Category
+#| fig-cap: Liczba klientów według rocznego dochodu
+
 plot_data %>%
   summarize(n = n(), .by = Income_Category) %>%
   hchart("column", hcaes(x = Income_Category, y = n)) %>%
-  hc_title(text = "Liczba klientów według rocznego dochodu") %>%
   hc_xAxis(title = list(text = "Roczny dochód klienta"), categories = levels(plot_data$Income_Category)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
-  hc_colors(c("royalblue"))
+  hc_colors(c("#31BAE9"))
 ```
 
 ### Według zmiennej zależnej
 
 ```{r Wykres słupkowy zmiennej Income_Category wg zmiennej zależnej}
+#| label: fig-Income_Category_AF
+#| fig-cap: Liczba klientów według rocznego dochodu i statusu klienta
+
 plot_data %>%
   summarize(n = n(), .by = c(Attrition_Flag, Income_Category)) %>%
   hchart("column", hcaes(x = Income_Category, y = n, group = Attrition_Flag)) %>%
-  hc_title(text = "Liczba klientów według rocznego dochodu i statusu klienta") %>%
   hc_xAxis(title = list(text = "Wykształcenie klienta"), categories = levels(plot_data$Income_Category)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
   hc_legend(
@@ -307,7 +326,7 @@ plot_data %>%
     layout = "horizontal",
     verticalAlign = "top"
   ) %>%
-  hc_colors(c("red", "royalblue"))
+  hc_colors(c("#E96031", "#31BAE9"))
 ```
 :::
 
@@ -321,30 +340,35 @@ plot_data %>%
 ### Wykres słupkowy
 
 ```{r Wykres słupkowy zmiennej Card_Category}
+#| label: fig-Card_Category
+#| fig-cap: Liczba klientów według rodzaju karty kredytowej
+
 plot_data %>%
   summarize(n = n(), .by = Card_Category) %>%
   hchart("column", hcaes(x = Card_Category, y = n)) %>%
   hc_title(text = "Liczba klientów według rodzaju karty kredytowej") %>%
   hc_xAxis(title = list(text = "Rodzaj karty kredytowej"), categories = levels(plot_data$Card_Category)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
-  hc_colors(c("royalblue"))
+  hc_colors(c("#31BAE9"))
 ```
 
 ### Według zmiennej zależnej
 
 ```{r Wykres słupkowy zmiennej Card_Category wg zmiennej zależnej}
+#| label: fig-Card_Category_AF
+#| fig-cap: Liczba klientów według rodzaju karty kredytowej i statusu klienta
+
 plot_data %>%
   summarize(n = n(), .by = c(Attrition_Flag, Card_Category)) %>%
   hchart("column", hcaes(x = Card_Category, y = n, group = Attrition_Flag)) %>%
-  hc_title(text = "Liczba klientów według rodzaju karty kredytowej i statusu klienta") %>%
   hc_xAxis(title = list(text = "Rodzaj karty kredytowej"), categories = levels(plot_data$Card_Category)) %>%
-  hc_yAxis(title = list(text = "Liczba klientów")) %>%
+  hc_yAxis(title = list(text = "Liczba klientów"), min = 0) %>%
   hc_legend(
     title = list(text = "Status klienta"),
     layout = "horizontal",
     verticalAlign = "top"
   ) %>%
-  hc_colors(c("red", "royalblue"))
+  hc_colors(c("#E96031", "#31BAE9"))
 ```
 :::
 
@@ -356,16 +380,22 @@ plot_data %>%
 ### Wykres gęstości
 
 ```{r Wykres gęstości zmiennej Customer_Age}
+#| label: fig-Customer_Age
+#| fig-cap: Rozkład wieku klientów
+
 hchart(density(plot_data$Customer_Age), "area") %>%
-  hc_title(text = "Rozkład wieku klientów") %>%
   hc_xAxis(title = list(text = "Wiek klientów")) %>%
   hc_yAxis(title = list(text = "Gęstość")) %>%
-  hc_colors(c("royalblue"))
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE)
 ```
 
 ### Według zmiennej zależnej
 
 ```{r Wykres gęstości zmiennej Customer_Age wg zmiennej zależnej}
+#| label: fig-Customer_Age_Atr
+#| fig-cap: Rozkład wieku klientów według statusu klienta
+
 # plot_data %>%
 #   summarize(n = n(), .by = c(Attrition_Flag, Card_Category)) %>%
 #   hchart("column", hcaes(x = Card_Category, y = n, group = Attrition_Flag)) %>%
@@ -381,13 +411,17 @@ hchart(density(plot_data$Customer_Age), "area") %>%
 
 hchart(
   density(plot_data[plot_data$Attrition_Flag == "Klient utracony", ]$Customer_Age),
-  "area"
+  type = "area", name = "Klient utracony"
 ) %>%
-  hc_add_series(density(plot_data[plot_data$Attrition_Flag == "Klient aktywny", ]$Customer_Age), area = TRUE) %>%
-  hc_title(text = "Rozkład wieku klientów według statusu klienta") %>%
+  hc_add_series(density(plot_data[plot_data$Attrition_Flag == "Klient aktywny", ]$Customer_Age), type = "area", name = "Klient aktywny") %>%
   hc_xAxis(title = list(text = "Wiek klientów")) %>%
   hc_yAxis(title = list(text = "Gęstość")) %>%
-  hc_colors(c("red", "royalblue"))
+  hc_legend(
+    title = list(text = "Status klienta"),
+    layout = "horizontal",
+    verticalAlign = "top"
+  ) %>%
+  hc_colors(c("#E96031", "#31BAE9"))
 ```
 :::
 
@@ -406,15 +440,15 @@ hchart(
 14. `Avg_Utilization_Ratio` - *zmienna ilościowa* opisująca średni wskaźnik wykorzystania środków z limitu karty kredytowej
 :::
 
-### Przygotowanie danych do dalszej pracy
+## Przygotowanie danych do dalszej pracy
 
 Zbiór nie zawiera braków danych. Koniecznym działaniem przed rozpoczęciem dalszej pracy jest usunięcie zbędnych kolumn z pierwotnego zbioru. Są to `CLIENTNUM`, czyli zmienna dla numeru identyfikacyjnego klienta oraz dwie zmienne, których usunięcie zaleca autor zbioru.
 
 Ponadto koniecznym krokiem jest zmiana typów danych na odpowiedni dla każdej zmiennej, dla zmiennych porządkowych razem z poprawnym uwzględnieniem kolejności poziomów.
 
-### Zależności w analizowanym zbiorze danych
+## Zależności w analizowanym zbiorze danych
 
-#### Zmienne ilościowe
+### Zmienne ilościowe
 
 Analizę zależności cech rozpocznę od zbadania korelacji r-Pearsona pośród zmiennych ilościowych.
 
@@ -426,6 +460,7 @@ numeric_data_cor <- data %>%
 ggcorrplot(
   corr = numeric_data_cor,
   type = "lower",
+  colors = c("#31BAE9", "white", "#E96031"),
   title = "Macierz korelacji zmiennych ilościowych",
   legend.title = "Korelacja",
   lab = TRUE,
@@ -443,7 +478,7 @@ Na podstawie powyższej wizualizacji zauważyć można trzy silnie dodatnio skor
 
 Wysokie wartości tych korelacji mają oczywiście sens i bezpośrednie przełożenie na rzeczywistość.
 
-#### Zmienne jakościowe
+### Zmienne jakościowe
 
 Analizę zależności zmiennych jakościowych rozpoczynam od zbadania zależności wszystkich par cech za pomocą testu $\chi^2$.
 
@@ -467,12 +502,36 @@ nominal_vars_df <- nominal_vars_df %>%
 ```
 
 ```{r Tabela niezależności cech nominalnych}
-knitr::kable(nominal_vars_df)
+#| label: tbl-independence
+#| tbl-cap: Tabela niezależności dla par cech nominalnych
+
+gt(nominal_vars_df) %>%
+  fmt_number(
+    columns = `p-value`,
+    decimals = 5
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold", size = 'large'),
+    locations = cells_column_labels()
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "#31BAE9", alpha = 0.8),
+      cell_text(color = "white")
+    ),
+    locations = cells_body(rows = Werdykt == "zależne")
+  ) %>%
+  tab_options(
+    table.width = pct(100),
+    quarto.disable_processing = TRUE
+  )
 ```
 
-Spośród 15 badanych par, dla 7 z nich odrzucamy hipotezę zerową o niezależności cech. Następnym krokiem będzie zbadanie siły zależności dla każdej z 7 par, do tego celu wykorzystam współczynnik V-Cramera.
+Spośród 15 badanych par, dla 7 z nich odrzucamy hipotezę zerową o niezależności cech. 
 
-```{r Badanie siły związku par zmiennych zależnych, echo=TRUE}
+Następnym krokiem będzie zbadanie siły zależności dla każdej z 7 par, do tego celu wykorzystam współczynnik V-Cramera.
+
+```{r Badanie siły związku par zmiennych nominalnych}
 non_indep_nominal <- nominal_vars_df %>%
   filter(Werdykt == "zależne")
 
@@ -486,8 +545,30 @@ for (i in 1:nrow(non_indep_nominal)) {
 non_indep_nominal$`V-Cramer` <- v.cramer
 ```
 
-```{r Tabela siły związku par zmiennych zależnych}
-knitr::kable(non_indep_nominal)
+```{r Tabela siły związku par zmiennych nominalnych wzajemnie zależnych}
+#| label: tbl-cramerv
+#| tbl-cap: Tabela siły związku par zmiennych nominalnych, wzajemnie zależnych (na podstawie współczynnika V-Cramera)
+
+gt(non_indep_nominal) %>%
+  fmt_number(
+    columns = c("p-value", "V-Cramer"),
+    decimals = 5
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold", size = 'large'),
+    locations = cells_column_labels()
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "#31BAE9", alpha = 0.8),
+      cell_text(color = "white")
+    ),
+    locations = cells_body(rows = 3)
+  ) %>%
+  tab_options(
+    table.width = pct(100),
+    quarto.disable_processing = TRUE
+  )
 ```
 
 Jak się okazuje, tylko w przypadku zmiennych płci (`Gender`) i rocznego dochodu klienta (`Income_Category`) zależność jest naprawdę silna. Pozostałe wartości są istotnie różne od zera, jednak nie pozwalają na wyciągnięcie pożytecznych wniosków. Martwić może jedynie fakt, że żadna ze zmiennych jakościowych nie ma silnego związku ze zmienną zależną, dzięki czemu nie możemy na tym etapie wskazać żadnej z nich jako istotnego predyktora dla problemu badawczego.
@@ -498,20 +579,28 @@ Jak się okazuje, tylko w przypadku zmiennych płci (`Gender`) i rocznego dochod
 
 plot_data %>%
   summarize(n = n(), .by = c(Income_Category, Gender)) %>%
-  hchart("column", hcaes(x = Income_Category, y = n, group = Gender)) %>%
+  hchart(type = "column", hcaes(x = Income_Category, y = n, group = Gender)) %>%
   hc_xAxis(title = list(text = "Roczny dochód klienta"), categories = levels(plot_data$Income_Category)) %>%
-  hc_yAxis(title = list(text = "Liczba klientów")) %>%
+  hc_yAxis(title = list(text = "Liczba klientów"), min = 0) %>%
   hc_legend(
     title = list(text = "Płeć klienta"),
     layout = "horizontal",
     verticalAlign = "top"
   ) %>%
-  hc_colors(c("red", "royalblue"))
+  hc_colors(c("#E96031", "#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return 'Płeć: <b>' + this.series.name +
+             '</b> <br> Liczba klientów: <b>' + this.y +
+             '</b> <br> Roczny dochód: <b>' + this.x + '</b>';
+    }")
+  )
 ```
 
 Na powyższym wykresie @fig-after_cramerv można zauważyć, że rzeczywiście zachodzi zależność między płcią, a progiem dochodowym. Jak się okazuje, żadna z byłych i obecnych klientek banku nie zarabia więcej, niż 60 tys. UDS rocznie. Widać również istotną dysproporcję w poziomie zarobków kobiet i mężczyzn, chociaż różnica w liczbie przedstawicieli każdej z płci nie jest duża. Warto jednak zwrócić uwagę na fakt, że zarobki niemal 20% kobiet pozostają nieznane.
 
-## Ewaluacja modeli uczenia maszynowego
+# Ewaluacja modeli uczenia maszynowego
 
 Zmienna zależna w omawianym zbiorze danych jest zmienną typu binarnego - każda z obserwacji może być klientem aktywnym, bądź klientem utraconym. Dziedziną problemu jest zatem klasyfikacja binarna, a w ramach pakietu `parsnip` istnieje wiele implementacji modeli uczenia maszynowego przeznaczonych dla tego typu problemów.
 
@@ -525,11 +614,11 @@ Wybrane przeze mnie rodzaje modeli to:
 -   SVM z jądrem RBF i silnikiem `kernlab`
 -   MLP z silnikiem `brulee`
 
-Metody te podzieliłem na 3 zestawy, w zależności od zalecanego preprocessingu [^1], powstaną zatem 3 przepływy pracy.
+Metody te podzieliłem na trzy zestawy, w zależności od zalecanego preprocessingu [^1], powstaną zatem trzy przepływy pracy.
 
 [^1]: Tidy Modeling with R: A Recommended Preprocessing <https://www.tmwr.org/pre-proc-table>
 
-### Przygotowanie danych do procesu uczenia
+## Przygotowanie danych do procesu uczenia
 
 Zbiór danych dzielę na zbiory treningowy (80%) oraz testowy (20%) z uwzględnieniem parametru `strata` dla zmiennej zależnej.
 
@@ -558,6 +647,7 @@ Kolejność kroków dla każdej z receptur oparłem na informacjach znalezionych
 
 ```{r Podział zbioru i receptury, echo=TRUE}
 set.seed(420)
+# Podział na zbiory treningowy i testowy
 data_split <- initial_split(data, prop = 0.8, strata = Attrition_Flag)
 train_data <- training(data_split)
 test_data <- testing(data_split)
@@ -586,7 +676,7 @@ folds <- vfold_cv(train_data, v = 10, strata = Attrition_Flag)
 metrics <- metric_set(accuracy, bal_accuracy, kap, j_index)
 ```
 
-### Przygotowanie specyfikacji modeli dla wybranych metod
+## Przygotowanie specyfikacji modeli dla wybranych metod
 
 Specyfikację dla modeli przygotowałem w zależności o tego, jak wiele parametrów można poddać tuningowi stosując poszczególne silniki. Dla modeli, które tego wymagały (w tym przypadku jedynie las losowy oraz boosting) zastosowałem również finalizację zakresów parametrów. Przy specyfikacji kierowałem się zasadą, by tuningować wszystkie parametry modelu, ale nie tuningować parametrów samego silnika.
 
@@ -661,7 +751,7 @@ svm_spec <- svm_rbf(
   set_mode("classification")
 ```
 
-### Kalibracja i uczenie modeli
+## Kalibracja i uczenie modeli
 
 Tworzę trzy osobne zbiory przepływów pracy, ze względu na specyficzne wymagania modeli pod względem preprocessingu, a następnie łączę je w jeden zbiór gotowy do tuningu hiperparametrów modeli. Na tym etapie uwzględniam również wykonaną wcześniej finalizację zakresów parametrów.
 
@@ -738,6 +828,12 @@ stopCluster(cl)
 koniec <- Sys.time()
 ```
 
+::: {.callout-warning}
+## Ostrzeżenie - paralelizacja
+
+Przed rozpoczęciem paralelizacji upewnij się, że wybrana liczba rdzeni jest odpowiednia dla specyfikacji twojego procesora.
+:::
+
 ```{r Zapis wyników tuningu, eval=FALSE}
 saveRDS(bayes_results, file = "output/bayes_results_2.rds")
 ```
@@ -768,9 +864,9 @@ autoplot(
 
 Na powyższym wykresie @fig-bayes_results_bal_acc można zauważyć, że najlepsze rezultaty osiągają modele drzewiaste, z których najbardziej zbliżone wyniki osiągają boosting i las losowy ze zbalansowaną dokładnością około 0.95. Dla przypomnienia, stosujemy metrykę zbalansowanej dokładności ze względu na brak balansu klas zmiennej zależnej.
 
-### Predykcja na zbiorze testowym
+## Predykcja na zbiorze testowym
 
-Wyniki dwóch najlepszych modeli porównamy za pomocą zbioru testowego. Na początku pobieram najlepsze zestawy parametrów ze względu na metrykę zbalansowanej dokładności.
+Wyniki dwóch najlepszych modeli porównam za pomocą zbioru testowego. Na początku pobieram najlepsze zestawy parametrów ze względu na metrykę zbalansowanej dokładności.
 
 ```{r Najlepsze parametry dla xgboost i rf, echo=TRUE}
 boosting_best_results <- bayes_results %>%
@@ -862,6 +958,6 @@ conf_mat_plot(rf_cm)
 
 :::
 
-### Istotność predyktorów
+## Istotność predyktorów
 
 Tu coś będzie
