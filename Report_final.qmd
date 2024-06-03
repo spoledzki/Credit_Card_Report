@@ -48,13 +48,57 @@ library(ggcorrplot)
 library(highcharter)
 library(themis)
 library(doSNOW)
+library(rio)
 library(vip)
 library(gt)
 tidymodels_prefer()
 ```
 
+> Kiedy diabeł idzie Wall Street, rogi mu przykrywa czarny melonik, miast kopytami dla niepoznaki stuka srebrną laską, a ogon ma z kart kredytowych.
+>
+> --- <cite>Andrzej Majewski</cite>
+
+# Karty kredytowe w USA
+
+W 1958 roku Bank of America wprowadził na rynek nowość, która okazała się kamieniem milowym w rozwoju nowoczesnej bankowości. Do 60 tys. klientów mieszkających we Fresno w Kalifornii trafiły gotowe do użycia karty noszące znak BankAmericard. Chociaż idea bezgotówkowych zakupów na kredyt nie była już wówczas innowacją, to test przeprowadzony 60 lat temu opierał się na nowym pomyśle.
+
+Karty BankAmericard mogły być używane w każdej placówce handlowej, niezależnie od branży. Wcześniej na amerykańskim rynku królowały karty obciążeniowe o ograniczonych zastosowaniach. Można było nimi płacić w restauracjach, hotelach albo wybranych sieciach handlowych.
+
+Drugą nowinką była formuła spłaty zadłużenia – odnawialny limit. Wystarczyło spłacić część długu, by móc od nowa korzystać z plastiku na zakupach. Spłata zadłużenia w terminie w całości pozwalała korzystać z okresu bezodsetkowego, czyli pożyczać środki bez ponoszenia kosztów.
+
+Rynkowy test z 1958 roku okazał się sukcesem. Już dwa lata później w portfelach Amerykanów znalazł się milion kredytówek, a Bank of America wkrótce później zaczął wydawać licencje na swoje karty. Inne banki mogły dołączyć do schematu jako wydawcy. Takie były narodziny giganta na rynku kart płatniczych – organizacji znanej dziś pod nazwą Visa. [za @Bankier1]
+
+Obecnie jednak coraz więcej Amerykanów w każdym wieku zaczyna mieć problemy z regularnym płaceniem rachunków, zwłaszcza ze spłacaniem kart kredytowych. Dzieje się to w momencie kiedy akcje na Wall Street osiągają historyczne maksima, a bezrobocie pozostaje na niezwykle niskim poziomie.
+
+Zgodnie z danymi Banku Rezerw Federalnych w przypadku długów, poza kredytami studenckimi, wskaźniki spłacalności od pandemii koronawirusa maleją. Teraz zaległości z tytułu kart kredytowych przekroczyły poziom sprzed COVID-19 i wciąż rosną. Np. te, których termin spłaty minął 90 dni temu, osiągnęły poziom 10,7 proc. To najwyższy poziom od 2012 roku. [za @Bankier2]
+
+# Problem badawczy
+
+Celem niniejszego projektu jest budowa optymalnego modelu klasyfikacyjnego, którego zadaniem będzie predykcja, czy dany klient banku zrezygnuje z posiadania karty kredytowej. Zagadnienie to jest biznesowo istotne dla możliwie skutecznego przeciwdziałania utracie klientów.
+
+# Zbiór danych
+
+Zbiór danych Credit Card Churn Prediction pochodzi z serwisu Kaggle [@Credit_Card_Churn_Prediction]. Zawiera informacje o 10127 klientach banku, dla których na podstawie 19 zmiennych określono fakt posiadania karty kredytowej - jest to 20 zmienna w zbiorze.
+
+## Przygotowanie danych do dalszej pracy
+
+Zbiór nie zawiera braków danych. Koniecznym działaniem przed rozpoczęciem dalszej pracy jest usunięcie zbędnych kolumn z pierwotnego zbioru. Są to `CLIENTNUM`, czyli zmienna dla numeru identyfikacyjnego klienta oraz dwie zmienne, których usunięcie zaleca autor zbioru.
+
+Ponadto koniecznym krokiem jest zmiana typów danych na odpowiedni dla każdej zmiennej, dla zmiennych porządkowych razem z poprawnym uwzględnieniem kolejności poziomów.
+
+```{r Wczytanie oraz czyszczenie oryginalnych danych}
+data <- import("data/credit_card_churn.csv")
+
+data <- data %>%
+  select(!starts_with("Naive"), -CLIENTNUM)
+```
+
+```{r Eksport oczyszczonych danych do nowego pliku}
+export(data, file = "data/clean_data.csv")
+```
+
 ```{r Wczytanie oczyszczonych danych}
-data <- read.csv("data/clean_data.csv")
+data <- import("data/clean_data.csv")
 ```
 
 ```{r Wstępna modyfikacja danych i przygotowanie danych do wykresów}
@@ -113,32 +157,6 @@ plot_data <- data %>%
   )
 ```
 
-> Kiedy diabeł idzie Wall Street, rogi mu przykrywa czarny melonik, miast kopytami dla niepoznaki stuka srebrną laską, a ogon ma z kart kredytowych.
->
-> --- <cite>Andrzej Majewski</cite>
-
-# Karty kredytowe w USA
-
-W 1958 roku Bank of America wprowadził na rynek nowość, która okazała się kamieniem milowym w rozwoju nowoczesnej bankowości. Do 60 tys. klientów mieszkających we Fresno w Kalifornii trafiły gotowe do użycia karty noszące znak BankAmericard. Chociaż idea bezgotówkowych zakupów na kredyt nie była już wówczas innowacją, to test przeprowadzony 60 lat temu opierał się na nowym pomyśle.
-
-Karty BankAmericard mogły być używane w każdej placówce handlowej, niezależnie od branży. Wcześniej na amerykańskim rynku królowały karty obciążeniowe o ograniczonych zastosowaniach. Można było nimi płacić w restauracjach, hotelach albo wybranych sieciach handlowych.
-
-Drugą nowinką była formuła spłaty zadłużenia – odnawialny limit. Wystarczyło spłacić część długu, by móc od nowa korzystać z plastiku na zakupach. Spłata zadłużenia w terminie w całości pozwalała korzystać z okresu bezodsetkowego, czyli pożyczać środki bez ponoszenia kosztów.
-
-Rynkowy test z 1958 roku okazał się sukcesem. Już dwa lata później w portfelach Amerykanów znalazł się milion kredytówek, a Bank of America wkrótce później zaczął wydawać licencje na swoje karty. Inne banki mogły dołączyć do schematu jako wydawcy. Takie były narodziny giganta na rynku kart płatniczych – organizacji znanej dziś pod nazwą Visa. [za @Bankier1]
-
-Obecnie jednak coraz więcej Amerykanów w każdym wieku zaczyna mieć problemy z regularnym płaceniem rachunków, zwłaszcza ze spłacaniem kart kredytowych. Dzieje się to w momencie kiedy akcje na Wall Street osiągają historyczne maksima, a bezrobocie pozostaje na niezwykle niskim poziomie.
-
-Zgodnie z danymi Banku Rezerw Federalnych w przypadku długów, poza kredytami studenckimi, wskaźniki spłacalności od pandemii koronawirusa maleją. Teraz zaległości z tytułu kart kredytowych przekroczyły poziom sprzed COVID-19 i wciąż rosną. Np. te, których termin spłaty minął 90 dni temu, osiągnęły poziom 10,7 proc. To najwyższy poziom od 2012 roku. [za @Bankier2]
-
-# Problem badawczy
-
-Celem niniejszego projektu jest budowa optymalnego modelu klasyfikacyjnego, którego zadaniem będzie predykcja, czy dany klient banku zrezygnuje z posiadania karty kredytowej. Zagadnienie to jest biznesowo istotne dla możliwie skutecznego przeciwdziałania utracie klientów.
-
-# Zbiór danych
-
-Zbiór danych Credit Card Churn Prediction pochodzi z serwisu Kaggle [@Credit_Card_Churn_Prediction]. Zawiera informacje o 10127 klientach banku, dla których na podstawie 19 zmiennych określono fakt posiadania karty kredytowej - jest to 20 zmienna w zbiorze.
-
 ## Charakterystyka zmiennych
 
 ::: panel-tabset
@@ -157,7 +175,13 @@ plot_data %>%
   hchart("column", hcaes(x = Attrition_Flag, y = n)) %>%
   hc_xAxis(title = list(text = "Status klienta"), categories = levels(plot_data$Attrition_Flag)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
-  hc_colors(c("#31BAE9"))
+  hc_colors(c("#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Liczba klientów: <b>' + this.y + '</b>';
+    }")
+  )
 ```
 
 2.  `Gender` - *zmienna binarna* opisująca płeć klienta, przyjmuje 2 wartości:
@@ -176,7 +200,13 @@ plot_data %>%
   hchart("column", hcaes(x = Gender, y = n)) %>%
   hc_xAxis(title = list(text = "Próg dochodowy"), categories = levels(plot_data$Gender)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
-  hc_colors(c("#31BAE9"))
+  hc_colors(c("#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Liczba klientów: <b>' + this.y + '</b>';
+    }")
+  )
 ```
 
 ### Według zmiennej zależnej
@@ -195,7 +225,14 @@ plot_data %>%
     layout = "horizontal",
     verticalAlign = "top"
   ) %>%
-  hc_colors(c("#E96031", "#31BAE9"))
+  hc_colors(c("#E96031", "#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return 'Status: <b>' + this.series.name +
+             '</b> <br> Liczba klientów: <b>' + this.y + '</b>';
+    }")
+  )
 ```
 :::
 
@@ -218,7 +255,13 @@ plot_data %>%
   hc_title(text = "Liczba klientów według stanu cywilnego") %>%
   hc_xAxis(title = list(text = "Stan cywilny klienta"), categories = levels(plot_data$Marital_Status)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
-  hc_colors(c("#31BAE9"))
+  hc_colors(c("#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Liczba klientów: <b>' + this.y + '</b>';
+    }")
+  )
 ```
 
 ### Według zmiennej zależnej
@@ -237,7 +280,14 @@ plot_data %>%
     layout = "horizontal",
     verticalAlign = "top"
   ) %>%
-  hc_colors(c("#E96031", "#31BAE9"))
+  hc_colors(c("#E96031", "#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return 'Status: <b>' + this.series.name +
+             '</b> <br> Liczba klientów: <b>' + this.y + '</b>';
+    }")
+  )
 ```
 :::
 
@@ -264,7 +314,13 @@ plot_data %>%
   hchart("column", hcaes(x = Education_Level, y = n)) %>%
   hc_xAxis(title = list(text = "Wykształcenie klienta"), categories = levels(plot_data$Education_Level)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
-  hc_colors(c("#31BAE9"))
+  hc_colors(c("#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Liczba klientów: <b>' + this.y + '</b>';
+    }")
+  )
 ```
 
 ### Według zmiennej zależnej
@@ -283,7 +339,14 @@ plot_data %>%
     layout = "horizontal",
     verticalAlign = "top"
   ) %>%
-  hc_colors(c("#E96031", "#31BAE9"))
+  hc_colors(c("#E96031", "#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return 'Status: <b>' + this.series.name +
+             '</b> <br> Liczba klientów: <b>' + this.y + '</b>';
+    }")
+  )
 ```
 :::
 
@@ -307,7 +370,13 @@ plot_data %>%
   hchart("column", hcaes(x = Income_Category, y = n)) %>%
   hc_xAxis(title = list(text = "Roczny dochód klienta"), categories = levels(plot_data$Income_Category)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
-  hc_colors(c("#31BAE9"))
+  hc_colors(c("#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Liczba klientów: <b>' + this.y + '</b>';
+    }")
+  )
 ```
 
 ### Według zmiennej zależnej
@@ -326,7 +395,14 @@ plot_data %>%
     layout = "horizontal",
     verticalAlign = "top"
   ) %>%
-  hc_colors(c("#E96031", "#31BAE9"))
+  hc_colors(c("#E96031", "#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return 'Status: <b>' + this.series.name +
+             '</b> <br> Liczba klientów: <b>' + this.y + '</b>';
+    }")
+  )
 ```
 :::
 
@@ -349,7 +425,13 @@ plot_data %>%
   hc_title(text = "Liczba klientów według rodzaju karty kredytowej") %>%
   hc_xAxis(title = list(text = "Rodzaj karty kredytowej"), categories = levels(plot_data$Card_Category)) %>%
   hc_yAxis(title = list(text = "Liczba klientów")) %>%
-  hc_colors(c("#31BAE9"))
+  hc_colors(c("#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Liczba klientów: <b>' + this.y + '</b>';
+    }")
+  )
 ```
 
 ### Według zmiennej zależnej
@@ -368,7 +450,14 @@ plot_data %>%
     layout = "horizontal",
     verticalAlign = "top"
   ) %>%
-  hc_colors(c("#E96031", "#31BAE9"))
+  hc_colors(c("#E96031", "#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return 'Status: <b>' + this.series.name +
+             '</b> <br> Liczba klientów: <b>' + this.y + '</b>';
+    }")
+  )
 ```
 :::
 
@@ -377,74 +466,822 @@ plot_data %>%
 1.  `Customer_Age` - *zmienna ilościowa* opisująca wiek klienta
 
 ::: panel-tabset
-### Wykres gęstości
+### Histogram
 
 ```{r Wykres gęstości zmiennej Customer_Age}
 #| label: fig-Customer_Age
 #| fig-cap: Rozkład wieku klientów
 
-hchart(density(plot_data$Customer_Age), "area") %>%
-  hc_xAxis(title = list(text = "Wiek klientów")) %>%
-  hc_yAxis(title = list(text = "Gęstość")) %>%
+hchart(plot_data$Customer_Age) %>%
+  hc_xAxis(title = list(text = "Wiek klienta")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
   hc_colors(c("#31BAE9")) %>%
-  hc_legend(enabled = FALSE)
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Wiek: <b>' + this.x + '</b>';
+    }")
+  )
 ```
 
 ### Według zmiennej zależnej
 
 ```{r Wykres gęstości zmiennej Customer_Age wg zmiennej zależnej}
-#| label: fig-Customer_Age_Atr
-#| fig-cap: Rozkład wieku klientów według statusu klienta
+#| label: fig-Customer_Age_AF
+#| layout-nrow: 2
+#| fig-cap:
+#|   - "Rozkład wieku klientów - klient utracony"
+#|   - "Rozkład wieku klientów - klient aktywny"
 
-# plot_data %>%
-#   summarize(n = n(), .by = c(Attrition_Flag, Card_Category)) %>%
-#   hchart("column", hcaes(x = Card_Category, y = n, group = Attrition_Flag)) %>%
-#   hc_title(text = "Liczba klientów według rodzaju karty kredytowej i statusu klienta") %>%
-#   hc_xAxis(title = list(text = "Rodzaj karty kredytowej"), categories = levels(plot_data$Card_Category)) %>%
-#   hc_yAxis(title = list(text = "Liczba klientów")) %>%
-#   hc_legend(
-#     title = list(text = "Status klienta"),
-#     layout = "horizontal",
-#     verticalAlign = "top"
-#   ) %>%
-#   hc_colors(c("red", "royalblue"))
+hchart(plot_data[plot_data$Attrition_Flag == "Klient utracony", ]$Customer_Age) %>%
+  hc_xAxis(title = list(text = "Wiek klienta")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#E96031")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Wiek: <b>' + this.x + '</b>';
+    }")
+  )
 
-hchart(
-  density(plot_data[plot_data$Attrition_Flag == "Klient utracony", ]$Customer_Age),
-  type = "area", name = "Klient utracony"
-) %>%
-  hc_add_series(density(plot_data[plot_data$Attrition_Flag == "Klient aktywny", ]$Customer_Age), type = "area", name = "Klient aktywny") %>%
-  hc_xAxis(title = list(text = "Wiek klientów")) %>%
-  hc_yAxis(title = list(text = "Gęstość")) %>%
+hchart(plot_data[plot_data$Attrition_Flag == "Klient aktywny", ]$Customer_Age) %>%
+  hc_xAxis(title = list(text = "Wiek klienta")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Wiek: <b>' + this.x + '</b>';
+    }")
+  )
+```
+:::
+
+2.  `Dependent_Count` - *zmienna ilościowa* opisująca liczbę osób, które pozostają na utrzymaniu klienta
+
+::: panel-tabset
+### Wykres słupkowy
+
+```{r Wykres słupkowy zmiennej Dependent_count}
+#| label: fig-Dependent_count
+#| fig-cap: Liczba klientów według liczby osób na utrzymaniu klienta
+
+plot_data %>%
+  summarize(n = n(), .by = Dependent_count) %>%
+  hchart("column", hcaes(x = Dependent_count, y = n)) %>%
+  hc_xAxis(title = list(text = "Liczba osób na utrzymaniu klienta")) %>%
+  hc_yAxis(title = list(text = "Liczba klientów")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Liczba klientów: <b>' + this.y +
+             '</b> <br> Liczba osób: <b>' + this.x + '</b>';
+    }")
+  )
+```
+
+### Według zmiennej zależnej
+
+```{r Wykres słupkowy zmiennej Dependent_count wg zmiennej zależnej}
+#| label: fig-Dependent_count_AF
+#| fig-cap: Liczba klientów według liczby osób na utrzymaniu klienta i statusu klienta
+
+plot_data %>%
+  summarize(n = n(), .by = c(Attrition_Flag, Dependent_count)) %>%
+  hchart("column", hcaes(x = Dependent_count, y = n, group = Attrition_Flag)) %>%
+  hc_xAxis(title = list(text = "Liczba osób na utrzymaniu klienta")) %>%
+  hc_yAxis(title = list(text = "Liczba klientów"), min = 0) %>%
   hc_legend(
     title = list(text = "Status klienta"),
     layout = "horizontal",
     verticalAlign = "top"
   ) %>%
-  hc_colors(c("#E96031", "#31BAE9"))
+  hc_colors(c("#E96031", "#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return 'Status: <b>' + this.series.name +
+             '</b> <br> Liczba klientów: <b>' + this.y +
+             '</b> <br> Liczba osób: <b>' + this.x + '</b>';
+    }")
+  )
 ```
 :::
 
-2.  `Dependent_Count` - *zmienna ilościowa* opisująca liczbę osób, które pozostają na utrzymaniu klienta
 3.  `Months_on_book` - *zmienna ilościowa* opisująca od ilu miesięcy klient jest związany z bankiem
-4.  `Total_Relationship_Count` - *zmienna ilościowa* opisująca z ilu usług banku korzysta dany klient
-5.  `Months_Inactive_12_mon` - *zmienna ilościowa* opisująca przez ile miesięcy (w ciągu ostatnich 12 miesięcy) klient nie podejmował żadnej aktywności
-6.  `Contacts_Count_12_mon` - *zmienna ilościowa* opisująca ile razy w ciągu ostatnich 12 miesięcy bank kontaktował się z klientem
-7.  `Credit_Limit` - *zmienna ilościowa* opisująca limit kredytowy na karcie klienta
-8.  `Total_Revolving_Bal` - *zmienna ilościowa* opisująca całkowite saldo odnawialne na karcie klienta
-9.  `Avg_Open_To_Buy` - *zmienna ilościowa* opisująca średnią różnicę między limitem kredytowym a stanem konta klienta w ciągu ostatnich 12 miesięcy
-10. `Total_Amt_Chng_Q4_Q1` - *zmienna ilościowa* opisująca zmianę w kwotach dokonywanych transakcji, porównanie 4 kwartału do 1 kwartału.
-11. `Total_Trans_Amt` - *zmienna ilościowa* opisująca sumę dokonanych transakcji z ostatnich 12 miesięcy
-12. `Total_Trans_Ct` - *zmienna ilościowa* opisująca liczbę dokonanych transakcji z ostatnich 12 miesięcy
-13. `Total_Ct_Chng_Q4_Q1` - *zmienna ilościowa* opisująca zmianę w liczbie dokonywanych transakcji, porównanie 4 kwartału do 1 kwartału.
-14. `Avg_Utilization_Ratio` - *zmienna ilościowa* opisująca średni wskaźnik wykorzystania środków z limitu karty kredytowej
+
+::: panel-tabset
+### Histogram
+
+```{r Wykres gęstości zmiennej Months_on_book}
+#| label: fig-Months_on_book
+#| fig-cap: Rozkład liczby miesięcy jako klient
+
+hchart(plot_data$Months_on_book) %>%
+  hc_xAxis(title = list(text = "Liczba miesięcy jako klient")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Liczba miesięcy: <b>' + this.x + '</b>';
+    }")
+  )
+```
+
+### Według zmiennej zależnej
+
+```{r Wykres gęstości zmiennej Months_on_book wg zmiennej zależnej}
+#| label: fig-Months_on_book_AF
+#| layout-nrow: 2
+#| fig-cap:
+#|   - "Rozkład liczby miesięcy jako klient - klient utracony"
+#|   - "Rozkład liczby miesięcy jako klient - klient aktywny"
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient utracony", ]$Months_on_book) %>%
+  hc_xAxis(title = list(text = "Liczba miesięcy jako klient")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#E96031")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Liczba miesięcy: <b>' + this.x + '</b>';
+    }")
+  )
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient aktywny", ]$Months_on_book) %>%
+  hc_xAxis(title = list(text = "Liczba miesięcy jako klient")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Liczba miesięcy: <b>' + this.x + '</b>';
+    }")
+  )
+```
 :::
 
-## Przygotowanie danych do dalszej pracy
+4.  `Total_Relationship_Count` - *zmienna ilościowa* opisująca z ilu usług banku korzysta dany klient
 
-Zbiór nie zawiera braków danych. Koniecznym działaniem przed rozpoczęciem dalszej pracy jest usunięcie zbędnych kolumn z pierwotnego zbioru. Są to `CLIENTNUM`, czyli zmienna dla numeru identyfikacyjnego klienta oraz dwie zmienne, których usunięcie zaleca autor zbioru.
+::: panel-tabset
+### Wykres słupkowy
 
-Ponadto koniecznym krokiem jest zmiana typów danych na odpowiedni dla każdej zmiennej, dla zmiennych porządkowych razem z poprawnym uwzględnieniem kolejności poziomów.
+```{r Wykres słupkowy zmiennej Total_Relationship_Count}
+#| label: fig-Total_Relationship_Count
+#| fig-cap: Liczba klientów według liczby usług w banku, z których korzysta klient
+
+plot_data %>%
+  summarize(n = n(), .by = Total_Relationship_Count) %>%
+  hchart("column", hcaes(x = Total_Relationship_Count, y = n)) %>%
+  hc_xAxis(title = list(text = "Liczba usług w banku")) %>%
+  hc_yAxis(title = list(text = "Liczba klientów")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Liczba klientów: <b>' + this.y +
+             '</b> <br> Liczba usług: <b>' + this.x + '</b>';
+    }")
+  )
+```
+
+### Według zmiennej zależnej
+
+```{r Wykres słupkowy zmiennej Total_Relationship_Count wg zmiennej zależnej}
+#| label: fig-Total_Relationship_Count_AF
+#| fig-cap: Liczba klientów według liczby usług w banku, z których korzysta klient i statusu klienta
+
+plot_data %>%
+  summarize(n = n(), .by = c(Attrition_Flag, Total_Relationship_Count)) %>%
+  hchart("column", hcaes(x = Total_Relationship_Count, y = n, group = Attrition_Flag)) %>%
+  hc_xAxis(title = list(text = "Liczba usług w banku")) %>%
+  hc_yAxis(title = list(text = "Liczba klientów"), min = 0) %>%
+  hc_legend(
+    title = list(text = "Status klienta"),
+    layout = "horizontal",
+    verticalAlign = "top"
+  ) %>%
+  hc_colors(c("#E96031", "#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return 'Status: <b>' + this.series.name +
+             '</b> <br> Liczba klientów: <b>' + this.y +
+             '</b> <br> Liczba usług: <b>' + this.x + '</b>';
+    }")
+  )
+```
+:::
+
+5.  `Months_Inactive_12_mon` - *zmienna ilościowa* opisująca przez ile miesięcy (w ciągu ostatnich 12 miesięcy) klient nie podejmował żadnej aktywności
+
+::: panel-tabset
+### Wykres słupkowy
+
+```{r Wykres słupkowy zmiennej Months_Inactive_12_mon}
+#| label: fig-Months_Inactive_12_mon
+#| fig-cap: Liczba klientów według liczby miesięcy bez aktywności
+
+plot_data %>%
+  summarize(n = n(), .by = Months_Inactive_12_mon) %>%
+  hchart("column", hcaes(x = Months_Inactive_12_mon, y = n)) %>%
+  hc_xAxis(title = list(text = "Liczba miesięcy bez aktywności klienta")) %>%
+  hc_yAxis(title = list(text = "Liczba klientów")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Liczba klientów: <b>' + this.y +
+             '</b> <br> Liczba miesięcy: <b>' + this.x + '</b>';
+    }")
+  )
+```
+
+### Według zmiennej zależnej
+
+```{r Wykres słupkowy zmiennej Months_Inactive_12_mon wg zmiennej zależnej}
+#| label: fig-Months_Inactive_12_mon_AF
+#| fig-cap: Liczba klientów według liczby miesięcy bez aktywności i statusu klienta
+
+plot_data %>%
+  summarize(n = n(), .by = c(Attrition_Flag, Months_Inactive_12_mon)) %>%
+  hchart("column", hcaes(x = Months_Inactive_12_mon, y = n, group = Attrition_Flag)) %>%
+  hc_xAxis(title = list(text = "Liczba miesięcy bez aktywności klienta")) %>%
+  hc_yAxis(title = list(text = "Liczba klientów"), min = 0) %>%
+  hc_legend(
+    title = list(text = "Status klienta"),
+    layout = "horizontal",
+    verticalAlign = "top"
+  ) %>%
+  hc_colors(c("#E96031", "#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return 'Status: <b>' + this.series.name +
+             '</b> <br> Liczba klientów: <b>' + this.y +
+             '</b> <br> Liczba miesięcy: <b>' + this.x + '</b>';
+    }")
+  )
+```
+:::
+
+6.  `Contacts_Count_12_mon` - *zmienna ilościowa* opisująca ile razy w ciągu ostatnich 12 miesięcy bank kontaktował się z klientem
+
+::: panel-tabset
+### Wykres słupkowy
+
+```{r Wykres słupkowy zmiennej Contacts_Count_12_mon}
+#| label: fig-Contacts_Count_12_mon
+#| fig-cap: Liczba klientów według liczby kontaktów z klientem
+
+plot_data %>%
+  summarize(n = n(), .by = Contacts_Count_12_mon) %>%
+  hchart("column", hcaes(x = Contacts_Count_12_mon, y = n)) %>%
+  hc_xAxis(title = list(text = "Liczba kontaktów z klientem")) %>%
+  hc_yAxis(title = list(text = "Liczba klientów")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Liczba klientów: <b>' + this.y +
+             '</b> <br> Liczba kontaktów: <b>' + this.x + '</b>';
+    }")
+  )
+```
+
+### Według zmiennej zależnej
+
+```{r Wykres słupkowy zmiennej Contacts_Count_12_mon wg zmiennej zależnej}
+#| label: fig-Contacts_Count_12_mon_AF
+#| fig-cap: Liczba klientów według liczby kontaktów z klientem i statusu klienta
+
+plot_data %>%
+  summarize(n = n(), .by = c(Attrition_Flag, Contacts_Count_12_mon)) %>%
+  hchart("column", hcaes(x = Contacts_Count_12_mon, y = n, group = Attrition_Flag)) %>%
+  hc_xAxis(title = list(text = "Liczba kontaktów z klientem")) %>%
+  hc_yAxis(title = list(text = "Liczba klientów"), min = 0) %>%
+  hc_legend(
+    title = list(text = "Status klienta"),
+    layout = "horizontal",
+    verticalAlign = "top"
+  ) %>%
+  hc_colors(c("#E96031", "#31BAE9")) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return 'Status: <b>' + this.series.name +
+             '</b> <br> Liczba klientów: <b>' + this.y +
+             '</b> <br> Liczba kontaktów: <b>' + this.x + '</b>';
+    }")
+  )
+```
+:::
+
+7.  `Credit_Limit` - *zmienna ilościowa* opisująca limit kredytowy na karcie klienta
+
+::: panel-tabset
+### Histogram
+
+```{r Wykres gęstości zmiennej Credit_Limit}
+#| label: fig-Credit_Limit
+#| fig-cap: Rozkład limitu kredytowego
+
+hchart(plot_data$Credit_Limit) %>%
+  hc_xAxis(title = list(text = "Limit kredytowy")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Limit kredytowy: <b>' + this.x + '</b>';
+    }")
+  )
+```
+
+### Według zmiennej zależnej
+
+```{r Wykres gęstości zmiennej Credit_Limit wg zmiennej zależnej}
+#| label: fig-Credit_Limit_AF
+#| layout-nrow: 2
+#| fig-cap:
+#|   - "Rozkład limitu kredytowego - klient utracony"
+#|   - "Rozkład limitu kredytowego - klient aktywny"
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient utracony", ]$Credit_Limit) %>%
+  hc_xAxis(title = list(text = "Limit kredytowy")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#E96031")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Limit kredytowy: <b>' + this.x + '</b>';
+    }")
+  )
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient aktywny", ]$Credit_Limit) %>%
+  hc_xAxis(title = list(text = "Limit kredytowy")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Limit kredytowy: <b>' + this.x + '</b>';
+    }")
+  )
+```
+:::
+
+8.  `Total_Revolving_Bal` - *zmienna ilościowa* opisująca całkowite saldo odnawialne na karcie klienta
+
+::: panel-tabset
+### Histogram
+
+```{r Wykres gęstości zmiennej Total_Revolving_Bal}
+#| label: fig-Total_Revolving_Bal
+#| fig-cap: Rozkład całkowitego salda odnawialnego
+
+hchart(plot_data$Total_Revolving_Bal) %>%
+  hc_xAxis(title = list(text = "Całkowite saldo odnawialne")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Całkowite saldo odnawialne: <b>' + this.x + '</b>';
+    }")
+  )
+```
+
+### Według zmiennej zależnej
+
+```{r Wykres gęstości zmiennej Total_Revolving_Bal wg zmiennej zależnej}
+#| label: fig-Total_Revolving_Bal_AF
+#| layout-nrow: 2
+#| fig-cap:
+#|   - "Rozkład całkowitego salda odnawialnego - klient utracony"
+#|   - "Rozkład całkowitego salda odnawialnego - klient aktywny"
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient utracony", ]$Total_Revolving_Bal) %>%
+  hc_xAxis(title = list(text = "Całkowite saldo odnawialne")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#E96031")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Całkowite saldo odnawialne: <b>' + this.x + '</b>';
+    }")
+  )
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient aktywny", ]$Total_Revolving_Bal) %>%
+  hc_xAxis(title = list(text = "Całkowite saldo odnawialne")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Całkowite saldo odnawialne: <b>' + this.x + '</b>';
+    }")
+  )
+```
+:::
+
+9.  `Avg_Open_To_Buy` - *zmienna ilościowa* opisująca średnią różnicę między limitem kredytowym a stanem konta klienta w ciągu ostatnich 12 miesięcy
+
+::: panel-tabset
+### Histogram
+
+```{r Wykres gęstości zmiennej Avg_Open_To_Buy}
+#| label: fig-Avg_Open_To_Buy
+#| fig-cap: Rozkład limitu kredytowego
+
+hchart(plot_data$Avg_Open_To_Buy) %>%
+  hc_xAxis(title = list(text = "Limit kredytowy")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Limit kredytowy: <b>' + this.x + '</b>';
+    }")
+  )
+```
+
+### Według zmiennej zależnej
+
+```{r Wykres gęstości zmiennej Avg_Open_To_Buy wg zmiennej zależnej}
+#| label: fig-Avg_Open_To_Buy_AF
+#| layout-nrow: 2
+#| fig-cap:
+#|   - "Rozkład średniej różnicy między limitem kredytowym a stanem konta klienta w ciągu ostatnich 12 miesięcy - klient utracony"
+#|   - "Rozkład średniej różnicy między limitem kredytowym a stanem konta klienta w ciągu ostatnich 12 miesięcy - klient aktywny"
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient utracony", ]$Avg_Open_To_Buy) %>%
+  hc_xAxis(title = list(text = "Średnia różnica między limitem kredytowym a stanem konta klienta")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#E96031")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Średnia różnica: <b>' + this.x + '</b>';
+    }")
+  )
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient aktywny", ]$Avg_Open_To_Buy) %>%
+  hc_xAxis(title = list(text = "Średnia różnica między limitem kredytowym a stanem konta klienta")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Średnia różnica: <b>' + this.x + '</b>';
+    }")
+  )
+```
+:::
+
+10. `Total_Amt_Chng_Q4_Q1` - *zmienna ilościowa* opisująca zmianę w kwotach dokonywanych transakcji, porównanie 4 kwartału do 1 kwartału.
+
+::: panel-tabset
+### Histogram
+
+```{r Wykres gęstości zmiennej Total_Amt_Chng_Q4_Q1}
+#| label: fig-Total_Amt_Chng_Q4_Q1
+#| fig-cap: Rozkład zmian w kwotach dokonywanych transakcji
+
+hchart(plot_data$Total_Amt_Chng_Q4_Q1) %>%
+  hc_xAxis(title = list(text = "Zmiana w kwotach dokonywanych transakcji")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Zmiana: <b>' + this.x + '</b>';
+    }")
+  )
+```
+
+### Według zmiennej zależnej
+
+```{r Wykres gęstości zmiennej Total_Amt_Chng_Q4_Q1 wg zmiennej zależnej}
+#| label: fig-Total_Amt_Chng_Q4_Q1_AF
+#| layout-nrow: 2
+#| fig-cap:
+#|   - "Rozkład zmian w kwotach dokonywanych transakcji - klient utracony"
+#|   - "Rozkład zmian w kwotach dokonywanych transakcji - klient aktywny"
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient utracony", ]$Total_Amt_Chng_Q4_Q1) %>%
+  hc_xAxis(title = list(text = "Zmiana w kwotach dokonywanych transakcji")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#E96031")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Zmiana: <b>' + this.x + '</b>';
+    }")
+  )
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient aktywny", ]$Total_Amt_Chng_Q4_Q1) %>%
+  hc_xAxis(title = list(text = "Zmiana w kwotach dokonywanych transakcji")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Zmiana: <b>' + this.x + '</b>';
+    }")
+  )
+```
+:::
+
+11. `Total_Trans_Amt` - *zmienna ilościowa* opisująca sumę dokonanych transakcji z ostatnich 12 miesięcy
+
+::: panel-tabset
+### Histogram
+
+```{r Wykres gęstości zmiennej Total_Trans_Amt}
+#| label: fig-Total_Trans_Amt
+#| fig-cap: Rozkład sumy dokonanych transakcji z ostatnich 12 miesięcy
+
+hchart(plot_data$Total_Trans_Amt) %>%
+  hc_xAxis(title = list(text = "Suma dokonanych transakcji")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Suma: <b>' + this.x + '</b>';
+    }")
+  )
+```
+
+### Według zmiennej zależnej
+
+```{r Wykres gęstości zmiennej Total_Trans_Amt wg zmiennej zależnej}
+#| label: fig-Total_Trans_Amt_AF
+#| layout-nrow: 2
+#| fig-cap:
+#|   - "Rozkład sumy dokonanych transakcji z ostatnich 12 miesięcy - klient utracony"
+#|   - "Rozkład sumy dokonanych transakcji z ostatnich 12 miesięcy - klient aktywny"
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient utracony", ]$Total_Trans_Amt) %>%
+  hc_xAxis(title = list(text = "Suma dokonanych transakcji")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#E96031")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Suma: <b>' + this.x + '</b>';
+    }")
+  )
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient aktywny", ]$Total_Trans_Amt) %>%
+  hc_xAxis(title = list(text = "Suma dokonanych transakcji")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Suma: <b>' + this.x + '</b>';
+    }")
+  )
+```
+:::
+
+12. `Total_Trans_Ct` - *zmienna ilościowa* opisująca liczbę dokonanych transakcji z ostatnich 12 miesięcy
+
+::: panel-tabset
+### Histogram
+
+```{r Wykres gęstości zmiennej Total_Trans_Ct}
+#| label: fig-Total_Trans_Ct
+#| fig-cap: Rozkład liczby dokonanych transakcji z ostatnich 12 miesięcy
+
+hchart(plot_data$Total_Trans_Ct) %>%
+  hc_xAxis(title = list(text = "Liczba dokonanych transakcji")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Liczba: <b>' + this.x + '</b>';
+    }")
+  )
+```
+
+### Według zmiennej zależnej
+
+```{r Wykres gęstości zmiennej Total_Trans_Ct wg zmiennej zależnej}
+#| label: fig-Total_Trans_Ct_AF
+#| layout-nrow: 2
+#| fig-cap:
+#|   - "Rozkład liczby dokonanych transakcji z ostatnich 12 miesięcy - klient utracony"
+#|   - "Rozkład liczby dokonanych transakcji z ostatnich 12 miesięcy - klient aktywny"
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient utracony", ]$Total_Trans_Ct) %>%
+  hc_xAxis(title = list(text = "Liczba dokonanych transakcji")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#E96031")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Liczba: <b>' + this.x + '</b>';
+    }")
+  )
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient aktywny", ]$Total_Trans_Ct) %>%
+  hc_xAxis(title = list(text = "Liczba dokonanych transakcji")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Liczba: <b>' + this.x + '</b>';
+    }")
+  )
+```
+:::
+
+13. `Total_Ct_Chng_Q4_Q1` - *zmienna ilościowa* opisująca zmianę w liczbie dokonywanych transakcji, porównanie 4 kwartału do 1 kwartału.
+
+::: panel-tabset
+### Histogram
+
+```{r Wykres gęstości zmiennej Total_Ct_Chng_Q4_Q1}
+#| label: fig-Total_Ct_Chng_Q4_Q1
+#| fig-cap: Rozkład zmiany liczby dokonanych transakcji z ostatnich 12 miesięcy
+
+hchart(plot_data$Total_Ct_Chng_Q4_Q1) %>%
+  hc_xAxis(title = list(text = "Zmiana liczby dokonanych transakcji")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Zmiana: <b>' + this.x + '</b>';
+    }")
+  )
+```
+
+### Według zmiennej zależnej
+
+```{r Wykres gęstości zmiennej Total_Ct_Chng_Q4_Q1 wg zmiennej zależnej}
+#| label: fig-Total_Ct_Chng_Q4_Q1_AF
+#| layout-nrow: 2
+#| fig-cap:
+#|   - "Rozkład zmiany liczby dokonanych transakcji z ostatnich 12 miesięcy - klient utracony"
+#|   - "Rozkład zmiany liczby dokonanych transakcji z ostatnich 12 miesięcy - klient aktywny"
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient utracony", ]$Total_Ct_Chng_Q4_Q1) %>%
+  hc_xAxis(title = list(text = "Zmiana liczby dokonanych transakcji")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#E96031")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Zmiana: <b>' + this.x + '</b>';
+    }")
+  )
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient aktywny", ]$Total_Ct_Chng_Q4_Q1) %>%
+  hc_xAxis(title = list(text = "Zmiana liczby dokonanych transakcji")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Zmiana: <b>' + this.x + '</b>';
+    }")
+  )
+```
+:::
+
+14. `Avg_Utilization_Ratio` - *zmienna ilościowa* opisująca średni wskaźnik wykorzystania środków z limitu karty kredytowej
+
+::: panel-tabset
+### Histogram
+
+```{r Wykres gęstości zmiennej Avg_Utilization_Ratio}
+#| label: fig-Avg_Utilization_Ratio
+#| fig-cap: Rozkład średniego wskaźnika wykorzystania środków z limitu karty kredytowej
+
+hchart(plot_data$Avg_Utilization_Ratio) %>%
+  hc_xAxis(title = list(text = "Średni wskaźnik wykorzystania środków")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Wskaźnik: <b>' + this.x + '</b>';
+    }")
+  )
+```
+
+### Według zmiennej zależnej
+
+```{r Wykres gęstości zmiennej Avg_Utilization_Ratio wg zmiennej zależnej}
+#| label: fig-Avg_Utilization_Ratio_AF
+#| layout-nrow: 2
+#| fig-cap:
+#|   - "Rozkład średniego wskaźnika wykorzystania środków z limitu karty kredytowej - klient utracony"
+#|   - "Rozkład średniego wskaźnika wykorzystania środków z limitu karty kredytowej - klient aktywny"
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient utracony", ]$Avg_Utilization_Ratio) %>%
+  hc_xAxis(title = list(text = "Średni wskaźnik wykorzystania środków")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#E96031")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Wskaźnik: <b>' + this.x + '</b>';
+    }")
+  )
+
+hchart(plot_data[plot_data$Attrition_Flag == "Klient aktywny", ]$Avg_Utilization_Ratio) %>%
+  hc_xAxis(title = list(text = "Średni wskaźnik wykorzystania środków")) %>%
+  hc_yAxis(title = list(text = "Częstość")) %>%
+  hc_colors(c("#31BAE9")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    formatter = JS("function() {
+      return '</b> Częstość: <b>' + this.y +
+             '</b> <br> Wskaźnik: <b>' + this.x + '</b>';
+    }")
+  )
+```
+:::
+
+::: {.callout-caution}
+## Uwaga - symetria zmiennych ilościowych
+
+Brak symetrii wielu zmiennych ilościowych jest istotną informacją przy procesie przygotowania danych dla niektórych modeli uczenia maszynowego.
+
+:::
+
+:::
 
 ## Zależności w analizowanym zbiorze danych
 
@@ -456,12 +1293,16 @@ Analizę zależności cech rozpocznę od zbadania korelacji r-Pearsona pośród 
 numeric_data_cor <- data %>%
   select(numeric_var_names) %>%
   cor()
+```
+
+```{r Wykres korelacji zmiennych ilościowych}
+#| label: fig-corrplot
+#| fig-cap: Macierz korelacji zmiennych ilościowych
 
 ggcorrplot(
   corr = numeric_data_cor,
   type = "lower",
   colors = c("#31BAE9", "white", "#E96031"),
-  title = "Macierz korelacji zmiennych ilościowych",
   legend.title = "Korelacja",
   lab = TRUE,
   lab_size = 2,
@@ -470,13 +1311,19 @@ ggcorrplot(
 )
 ```
 
-Na podstawie powyższej wizualizacji zauważyć można trzy silnie dodatnio skorelowane pary zmiennych:
+Na podstawie wykresu @fig-corrplot zauważyć można trzy silnie dodatnio skorelowane pary zmiennych:
 
 1.  Wiek klienta (`Customer_Age`) oraz liczba miesięcy korzystania z usług banku (`Months_on_book`)
 2.  Suma (`Total_Trans_Amt`) oraz liczba (`Total_Trans_Ct`) dokonanych w ciągu ostatnich 12 miesięcy transakcji
 3.  Limit kredytowy na karcie klienta (`Credit_Limit`) oraz średnia różnica między limitem a stanem konta w ciągu ostatnich 12 miesięcy (`Avg_Open_To_Buy`)
 
 Wysokie wartości tych korelacji mają oczywiście sens i bezpośrednie przełożenie na rzeczywistość.
+
+::: {.callout-caution}
+## Uwaga - korelacja zmiennych ilościowych
+
+Wysokie skorelowanie zmiennych ilościowych jest istotną informacją przy procesie przygotowania danych dla niektórych modeli uczenia maszynowego.
+:::
 
 ### Zmienne jakościowe
 
@@ -511,7 +1358,7 @@ gt(nominal_vars_df) %>%
     decimals = 5
   ) %>%
   tab_style(
-    style = cell_text(weight = "bold", size = 'large'),
+    style = cell_text(weight = "bold", size = "large"),
     locations = cells_column_labels()
   ) %>%
   tab_style(
@@ -555,7 +1402,7 @@ gt(non_indep_nominal) %>%
     decimals = 5
   ) %>%
   tab_style(
-    style = cell_text(weight = "bold", size = 'large'),
+    style = cell_text(weight = "bold", size = "large"),
     locations = cells_column_labels()
   ) %>%
   tab_style(
@@ -614,7 +1461,7 @@ Wybrane przeze mnie rodzaje modeli to:
 -   SVM z jądrem RBF i silnikiem `kernlab`
 -   MLP z silnikiem `brulee`
 
-Metody te podzieliłem na trzy zestawy, w zależności od zalecanego preprocessingu [^1], powstaną zatem trzy przepływy pracy.
+Metody te podzieliłem na trzy zestawy, w zależności od zalecanego preprocessingu[^1], powstaną zatem trzy przepływy pracy.
 
 [^1]: Tidy Modeling with R: A Recommended Preprocessing <https://www.tmwr.org/pre-proc-table>
 
@@ -881,16 +1728,20 @@ rf_best_results <- bayes_results %>%
 Następnie dokonuję finalizacji każdego z modeli na podstawie zestawów najlepszych parametrów i wykonuję predykcję na zbiorze testowym.
 
 ```{r Finalizacja modeli oraz predykcje na zbiorze testowym, echo=TRUE}
-boosting_test_results <- bayes_results %>%
+boosting_last_fit <- bayes_results %>%
   extract_workflow("xgboost") %>%
   finalize_workflow(boosting_best_results) %>%
-  last_fit(split = data_split) %>%
+  last_fit(split = data_split)
+
+boosting_test_results <- boosting_last_fit %>%
   collect_predictions()
 
-rf_test_results <- bayes_results %>%
+rf_last_fit <- bayes_results %>%
   extract_workflow("random_forest") %>%
   finalize_workflow(rf_best_results) %>%
-  last_fit(split = data_split) %>%
+  last_fit(split = data_split)
+
+rf_test_results <- rf_last_fit %>%
   collect_predictions()
 ```
 
@@ -947,17 +1798,60 @@ conf_mat_plot <- function(conf_matrix) {
 ## Boosting
 
 ```{r Wizualizacja macierzy konfuzji Boosting}
+#| label: fig-boosting_cm
+#| fig-cap: Macierz konfuzji dla modelu Boosting
+
 conf_mat_plot(boosting_cm)
 ```
 
 ## Las Losowy
 
 ```{r Wizualizacja macierzy konfuzji Las Losowy}
+#| label: fig-rf_cm
+#| fig-cap: Macierz konfuzji dla modelu Lasu Losowego
+
 conf_mat_plot(rf_cm)
 ```
 
 :::
 
+Oba modele na zbiorze testowym dają bardzo podobne wyniki predykcji. Na poziomie zbalansowanej dokładności bliskim 0.95 skuteczność obu modeli można ocenić jako bardzo dobrą. Co (pod względem biznesowym) ważne, oba modele lepiej radzą sobie z przewidywaniem klientów, którzy rezygnują z posiadania karty kredytowej.
+
 ## Istotność predyktorów
 
-Tu coś będzie
+Modele Boostingu i Lasu Losowego porównam pod względem dziesięciu najistotniejszych predyktorów. 
+
+::: panel-tabset
+
+## Boosting
+
+```{r Istotność predyktorów Boosting}
+#| label: fig-boosting_vip
+#| fig-cap: Istotność predyktorów dla modelu Boosting
+
+boosting_last_fit %>%
+  extract_fit_parsnip() %>%
+  vip(num_features = 10, aesthetics = list(fill = "#31BAE9")) + 
+  labs(y = "Istotność") + 
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 12))
+```
+
+## Las Losowy
+
+```{r Istotność predyktorów Las Losowy}
+#| label: fig-rf_vip
+#| fig-cap: Istotność predyktorów dla modelu Lasu Losowego
+
+rf_last_fit %>%
+  extract_fit_parsnip() %>%
+  vip(num_features = 10, aesthetics = list(fill = "#31BAE9")) + 
+  labs(y = "Istotność") + 
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 12))
+```
+
+:::
+
+# Wnioski
+Siema
