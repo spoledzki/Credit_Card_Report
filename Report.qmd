@@ -45,6 +45,7 @@ library(tidyverse)
 library(tidymodels)
 library(baguette)
 library(ggcorrplot)
+library(ggpubr)
 library(highcharter)
 library(themis)
 library(doSNOW)
@@ -68,17 +69,17 @@ Drugą nowinką była formuła spłaty zadłużenia – odnawialny limit. Wystar
 
 Rynkowy test z 1958 roku okazał się sukcesem. Już dwa lata później w portfelach Amerykanów znalazł się milion kredytówek, a Bank of America wkrótce później zaczął wydawać licencje na swoje karty. Inne banki mogły dołączyć do schematu jako wydawcy. Takie były narodziny giganta na rynku kart płatniczych – organizacji znanej dziś pod nazwą Visa. [za @Bankier1]
 
-Obecnie jednak coraz więcej Amerykanów w każdym wieku zaczyna mieć problemy z regularnym płaceniem rachunków, zwłaszcza ze spłacaniem kart kredytowych. Dzieje się to w momencie kiedy akcje na Wall Street osiągają historyczne maksima, a bezrobocie pozostaje na niezwykle niskim poziomie.
+Obecnie coraz więcej Amerykanów w każdym wieku zaczyna mieć problemy z regularnym płaceniem rachunków, zwłaszcza ze spłacaniem kart kredytowych. Dzieje się to w momencie kiedy akcje na Wall Street osiągają historyczne maksima, a bezrobocie pozostaje na niezwykle niskim poziomie.
 
 Zgodnie z danymi Banku Rezerw Federalnych w przypadku długów, poza kredytami studenckimi, wskaźniki spłacalności od pandemii koronawirusa maleją. Teraz zaległości z tytułu kart kredytowych przekroczyły poziom sprzed COVID-19 i wciąż rosną. Np. te, których termin spłaty minął 90 dni temu, osiągnęły poziom 10,7 proc. To najwyższy poziom od 2012 roku. [za @Bankier2]
 
 # Problem badawczy
 
-Celem niniejszego projektu jest budowa optymalnego modelu klasyfikacyjnego, którego zadaniem będzie predykcja, czy dany klient banku zrezygnuje z posiadania karty kredytowej. Zagadnienie to jest biznesowo istotne dla możliwie skutecznego przeciwdziałania utracie klientów.
+Celem niniejszego projektu jest budowa optymalnego modelu klasyfikacyjnego, którego zadaniem będzie predykcja, czy dany klient banku zrezygnuje z posiadania karty kredytowej. Zagadnienie to jest biznesowo istotne dla możliwie skutecznego przeciwdziałania procesowi utraty klientów.
 
 # Zbiór danych
 
-Zbiór danych Credit Card Churn Prediction pochodzi z serwisu Kaggle [@Credit_Card_Churn_Prediction]. Zawiera informacje o 10127 klientach banku, dla których na podstawie 19 zmiennych określono fakt posiadania karty kredytowej - jest to 20 zmienna w zbiorze.
+Zbiór danych Credit Card Churn Prediction pochodzi z serwisu Kaggle [@Credit_Card_Churn_Prediction]. Zawiera informacje o 10127 klientach banku, dla których na podstawie 19 zmiennych określono fakt posiadania karty kredytowej - jest to 20 zmienna w zbiorze. Pozostałe 3 zmienne w zbiorze nie będą istotne dla dalszej analizy.
 
 ## Przygotowanie danych do dalszej pracy
 
@@ -294,13 +295,13 @@ plot_data %>%
 ## Zmienne porządkowe
 
 1.  `Education_Level` - *zmienna porządkowa* opisująca wykształcenie klienta, przyjmuje 7 wartości:
+    -   `Unknown` - nieznane
     -   `Uneducated` - brak wykształcenia
     -   `High School` - szkoła średnia
     -   `College` - studia wyższe bez tytułu
     -   `Graduate` - studia licencjackie
     -   `Post-Graduate` - studia podyplomowe
     -   `Doctorate` - doktorat
-    -   `Unknown` - nieznane
 
 ::: panel-tabset
 ### Wykres słupkowy
@@ -1445,7 +1446,7 @@ plot_data %>%
   )
 ```
 
-Na powyższym wykresie @fig-after_cramerv można zauważyć, że rzeczywiście zachodzi zależność między płcią, a progiem dochodowym. Jak się okazuje, żadna z byłych i obecnych klientek banku nie zarabia więcej, niż 60 tys. UDS rocznie. Widać również istotną dysproporcję w poziomie zarobków kobiet i mężczyzn, chociaż różnica w liczbie przedstawicieli każdej z płci nie jest duża. Warto jednak zwrócić uwagę na fakt, że zarobki niemal 20% kobiet pozostają nieznane.
+Na powyższym wykresie @fig-after_cramerv można zauważyć, że rzeczywiście zachodzi zależność między płcią, a rocznym dochodem. Jak się okazuje, żadna z byłych i obecnych klientek banku nie zarabia więcej, niż 60 tys. USD rocznie. Widać istotną dysproporcję w poziomie zarobków kobiet i mężczyzn, chociaż różnica w liczbie przedstawicieli każdej z płci nie jest duża. Warto jednak zwrócić uwagę na fakt, że zarobki niemal 20% kobiet pozostają nieznane.
 
 # Ewaluacja modeli uczenia maszynowego
 
@@ -1461,7 +1462,7 @@ Wybrane przeze mnie rodzaje modeli to:
 -   SVM z jądrem RBF i silnikiem `kernlab`
 -   MLP z silnikiem `brulee`
 
-Metody te podzieliłem na trzy zestawy, w zależności od zalecanego preprocessingu[^1], powstaną zatem trzy przepływy pracy.
+Metody te podzieliłem na trzy zestawy przepływów pracy, w zależności od zalecanego preprocessingu[^1].
 
 [^1]: Tidy Modeling with R: A Recommended Preprocessing <https://www.tmwr.org/pre-proc-table>
 
@@ -1469,14 +1470,14 @@ Metody te podzieliłem na trzy zestawy, w zależności od zalecanego preprocessi
 
 Zbiór danych dzielę na zbiory treningowy (80%) oraz testowy (20%) z uwzględnieniem parametru `strata` dla zmiennej zależnej.
 
-Dla każdej z receptur podstawowa formuła będzie taka sama i chcemy przewidywać zmienną zależną na podstawie wszystkich predyktorów, dodatkowo w każdym przypadku stosujemy próbkowanie w dół ze względu na zmienną zależną.
+Dla każdej z receptur podstawowa formuła jest taka sama i przewiduje zmienną zależną na podstawie wszystkich predyktorów, dodatkowo w każdym przypadku stosuję próbkowanie w dół ze względu na zmienną zależną.
 
 Recepturę podstawową stosuję dla modeli drzewa decyzyjnego, lasu losowego i baggingu.
 
 Następna receptura poszerzona jest o następujące kroki:
 
 - usunięcie zmiennych silnie skorelowanych (domyślnie powyżej 0.9),
-- usunięcie zmiennych o zerowej wariancji
+- usunięcie zmiennych o zerowej wariancji,
 - one-hot encoding dla zmiennych nominalnych
 
 Recepturę stosuję dla modeli regresji logistycznej oraz boostingu.
@@ -1525,7 +1526,7 @@ metrics <- metric_set(accuracy, bal_accuracy, kap, j_index)
 
 ## Przygotowanie specyfikacji modeli dla wybranych metod
 
-Specyfikację dla modeli przygotowałem w zależności o tego, jak wiele parametrów można poddać tuningowi stosując poszczególne silniki. Dla modeli, które tego wymagały (w tym przypadku jedynie las losowy oraz boosting) zastosowałem również finalizację zakresów parametrów. Przy specyfikacji kierowałem się zasadą, by tuningować wszystkie parametry modelu, ale nie tuningować parametrów samego silnika.
+Specyfikację dla modeli przygotowuję w zależności o tego, jak wiele parametrów można poddać tuningowi stosując poszczególne silniki. Dla modeli, które tego wymagają (w tym przypadku jedynie las losowy oraz boosting) stosuję również finalizację zakresów parametrów. Przy specyfikacji kieruję się zasadą, by tuningować wszystkie parametry modelu, ale nie tuningować parametrów samego silnika.
 
 ```{r Specyfikacja modeli, eval=FALSE, echo=TRUE}
 # Regresja logistyczna
@@ -1699,7 +1700,7 @@ autoplot(
   metric = "bal_accuracy",
   select_best = TRUE
 ) +
-  geom_text(aes(y = mean - std_err - 1 / 250, label = wflow_id), angle = 90, hjust = 1) +
+  geom_text(aes(y = mean - std_err - 1 / 250, label = wflow_id), angle = 90, hjust = 1, size = 6) +
   lims(y = c(0.75, 0.975)) +
   labs(
     x = "Pozycja modelu",
@@ -1709,25 +1710,35 @@ autoplot(
   theme(legend.position = "none")
 ```
 
-Na powyższym wykresie @fig-bayes_results_bal_acc można zauważyć, że najlepsze rezultaty osiągają modele drzewiaste, z których najbardziej zbliżone wyniki osiągają boosting i las losowy ze zbalansowaną dokładnością około 0.95. Dla przypomnienia, stosujemy metrykę zbalansowanej dokładności ze względu na brak balansu klas zmiennej zależnej.
+Na powyższym wykresie @fig-bayes_results_bal_acc można zauważyć, że najlepsze rezultaty osiągają modele drzewiaste, z których najbardziej zbliżone wyniki mają boosting i las losowy ze zbalansowaną dokładnością około 0.95, jako trzeci plasuje się model bagging, z wynikiem około 0.93. 
+
+Dla przypomnienia, metrykę zbalansowanej dokładności stosujemy ze względu na brak balansu klas zmiennej zależnej.
 
 ## Predykcja na zbiorze testowym
 
-Wyniki dwóch najlepszych modeli porównam za pomocą zbioru testowego. Na początku pobieram najlepsze zestawy parametrów ze względu na metrykę zbalansowanej dokładności.
+Wyniki trzech najlepszych modeli porównuję za pomocą zbioru testowego. Na początku pobieram najlepsze zestawy parametrów ze względu na metrykę zbalansowanej dokładności.
 
-```{r Najlepsze parametry dla xgboost i rf, echo=TRUE}
+```{r Najlepsze parametry dla boostingu, rf i baggingu, echo=TRUE}
+# Boosting
 boosting_best_results <- bayes_results %>%
   extract_workflow_set_result("xgboost") %>%
   select_best(metric = "bal_accuracy")
 
+# Las Losowy
 rf_best_results <- bayes_results %>%
   extract_workflow_set_result("random_forest") %>%
+  select_best(metric = "bal_accuracy")
+
+# Bagging
+bagging_best_results <- bayes_results %>%
+  extract_workflow_set_result("bagging") %>%
   select_best(metric = "bal_accuracy")
 ```
 
 Następnie dokonuję finalizacji każdego z modeli na podstawie zestawów najlepszych parametrów i wykonuję predykcję na zbiorze testowym.
 
 ```{r Finalizacja modeli oraz predykcje na zbiorze testowym, echo=TRUE}
+# Boosting
 boosting_last_fit <- bayes_results %>%
   extract_workflow("xgboost") %>%
   finalize_workflow(boosting_best_results) %>%
@@ -1736,6 +1747,7 @@ boosting_last_fit <- bayes_results %>%
 boosting_test_results <- boosting_last_fit %>%
   collect_predictions()
 
+# Las Losowy
 rf_last_fit <- bayes_results %>%
   extract_workflow("random_forest") %>%
   finalize_workflow(rf_best_results) %>%
@@ -1743,14 +1755,28 @@ rf_last_fit <- bayes_results %>%
 
 rf_test_results <- rf_last_fit %>%
   collect_predictions()
+
+# Bagging
+bagging_last_fit <- bayes_results %>%
+  extract_workflow("bagging") %>%
+  finalize_workflow(bagging_best_results) %>%
+  last_fit(split = data_split)
+
+bagging_test_results <- bagging_last_fit %>%
+  collect_predictions()
 ```
 
 Na podstawie zgromadzonych wyników wykonuję macierze konfuzji.
 
 ```{r Macierze konfuzji dla obu modeli}
+# Boosting
 boosting_cm <- conf_mat(boosting_test_results, truth = Attrition_Flag, estimate = .pred_class)
 
+# Las Losowy
 rf_cm <- conf_mat(rf_test_results, truth = Attrition_Flag, estimate = .pred_class)
+
+# Bagging
+bagging_cm <- conf_mat(bagging_test_results, truth = Attrition_Flag, estimate = .pred_class)
 ```
 
 ```{r Funkcja dla wizualizacji macierzy konfuzji}
@@ -1760,7 +1786,7 @@ conf_mat_plot <- function(conf_matrix) {
     filter(.metric == "bal_accuracy") %>%
     select(.estimate) %>%
     as.numeric() %>%
-    round(digits = 2)
+    round(digits = 4)
 
   matrix <- as.data.frame(conf_matrix$table) %>%
     mutate(N = Freq, .keep = "unused") %>%
@@ -1781,7 +1807,7 @@ conf_mat_plot <- function(conf_matrix) {
       name = "Referencja",
       labels = c("Klient utracony", "Klient aktywny")
     ) +
-    labs(caption = paste("Zbalansowana dokładność:", bal_acc)) +
+    labs(caption = paste0("Zbalansowana dokładność: ", bal_acc*100, "%")) +
     theme_minimal() +
     theme(
       legend.position = "none",
@@ -1813,13 +1839,20 @@ conf_mat_plot(boosting_cm)
 conf_mat_plot(rf_cm)
 ```
 
-:::
+## Bagging
 
-Oba modele na zbiorze testowym dają bardzo podobne wyniki predykcji. Na poziomie zbalansowanej dokładności bliskim 0.95 skuteczność obu modeli można ocenić jako bardzo dobrą. Co (pod względem biznesowym) ważne, oba modele lepiej radzą sobie z przewidywaniem klientów, którzy rezygnują z posiadania karty kredytowej.
+```{r}
+#| label: fig-bagging_cm
+#| fig-cap: Macierz konfuzji dla modelu Bagging
+
+conf_mat_plot(bagging_cm)
+```
+
+:::
 
 ## Istotność predyktorów
 
-Modele Boostingu i Lasu Losowego porównam pod względem dziesięciu najistotniejszych predyktorów. 
+Teraz porównam modele pod względem dziesięciu najistotniejszych predyktorów.
 
 ::: panel-tabset
 
@@ -1851,7 +1884,46 @@ rf_last_fit %>%
   theme(axis.text.y = element_text(size = 12))
 ```
 
+## Bagging
+
+```{r Istotność predyktorów Las Losowy}
+#| label: fig-bagging_vip
+#| fig-cap: Istotność predyktorów dla modelu Bagging
+
+vi_bag <- bagging_last_fit %>% extract_fit_parsnip()
+
+vi_bag$fit$imp %>% 
+  slice_max(value, n = 10) %>% 
+  ggplot(aes(x = reorder(term, value), y = value)) + 
+  geom_col(fill = "#31BAE9") + 
+  coord_flip() + 
+  labs(y = "Istotność") + 
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 12),
+        axis.title.y = element_blank())
+```
+
 :::
 
+Wszystkie trzy modele jako sześć najistotniejszych predyktorów wybrały zmienne:
+
+- `Total_Trans_Amt`,
+- `Total_Trans_Ct`,
+- `Total_Ct_Chng_Q4_Q1`,
+- `Total_Revolving_Bal`,
+- `Total_Amt_Chng_Q4_Q1`,
+- `Total_Relationship_Count`
+
+w różnej kolejności, z wyjątkiem zmiennej `Total_Relationship_Count`, która za każdym razem była szósta.
+
+Każdy z modeli jako istotną zmienną wybrał również `Credit_Limit`, a wszystkie współdzielą ze sobą 7 do 9 zmiennych w zależności od zestawienia.
+
+Wśród wyborów zdecydowanie dominują zmienne ilościowe, jedynie model bagging wybrał jako istotną zmienną porządkową `Card_Category`.
+
 # Wnioski
-Siema
+
+Pod względem skuteczności na najlepszy wynik osiągnął model lasu losowego, z dokładnością 95.25%, drugi w kolejności wynik to model boosting, z dokładnością 94.4%, natomiast ostatni, chociaż nadal wysoki rezultat to dokładność 93.09% dla modelu bagging.
+
+Skuteczność tych trzech modeli można ocenić jako przynajmniej dobrą. Ponadto, dokładność zarówno na zbiorze treningowym, jak i testowym jest w każdym przypadku niemal taka sama, co wskazuje na brak przeuczenia modeli.
+
+Co ważne pod względem biznesowym, modele dobrze radzą sobie z poprawnym klasyfikowaniem klientów, którzy rezygnują z posiadania karty kredytowej.
